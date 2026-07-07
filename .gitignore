@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.pem
+.env
+.env.*
+!.env.example
+
+# Backend
+backend/build/
+backend/.gradle/
+backend/out/
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log

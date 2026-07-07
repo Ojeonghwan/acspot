@@ -1,0 +1,52 @@
+﻿services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: acspot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: acspot
+      POSTGRES_USER: acspot
+      POSTGRES_PASSWORD: acspot
+    ports:
+      - "5432:5432"
+    volumes:
+      - acspot-db-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acspot -d acspot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: acspot-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/acspot
+      SPRING_DATASOURCE_USERNAME: acspot
+      SPRING_DATASOURCE_PASSWORD: acspot
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: acspot-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  acspot-db-data:
