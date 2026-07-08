@@ -1,4 +1,4 @@
-﻿import { CircleHelp, Snowflake, Sun } from "lucide-react";
+import { CircleHelp, Snowflake, Sun } from "lucide-react";
 import type { AcStatus } from "@/lib/types";
 
 type AcStatusBadgeProps = {

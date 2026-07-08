@@ -1,4 +1,4 @@
-﻿const STORAGE_KEY = "acspot.anonymousId";
+const STORAGE_KEY = "acspot.anonymousId";
 
 export function getAnonymousId(): string {
   if (typeof window === "undefined") {

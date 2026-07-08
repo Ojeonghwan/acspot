@@ -1,4 +1,4 @@
-﻿import { Clock, Users } from "lucide-react";
+import { Clock, Users } from "lucide-react";
 import { AcStatusBadge } from "./AcStatusBadge";
 import { PlaceIcon } from "./PlaceIcon";
 import type { Place } from "@/lib/types";

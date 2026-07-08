@@ -1,4 +1,4 @@
-﻿import { Clock, Users, X } from "lucide-react";
+import { Clock, Users, X } from "lucide-react";
 import { AcStatusBadge } from "./AcStatusBadge";
 import { PlaceIcon } from "./PlaceIcon";
 import { ReportButtons } from "./ReportButtons";
@@ -7,12 +7,13 @@ import type { Place, ReportChoice } from "@/lib/types";
 type PlaceBottomSheetProps = {
   place: Place | null;
   reportChoice: ReportChoice | null;
+  saving?: boolean;
   onReportChange: (choice: ReportChoice) => void;
   onClose: () => void;
   onSave: () => void;
 };
 
-export function PlaceBottomSheet({ place, reportChoice, onReportChange, onClose, onSave }: PlaceBottomSheetProps) {
+export function PlaceBottomSheet({ place, reportChoice, saving = false, onReportChange, onClose, onSave }: PlaceBottomSheetProps) {
   if (!place) {
     return null;
   }
@@ -57,11 +58,11 @@ export function PlaceBottomSheet({ place, reportChoice, onReportChange, onClose,
       <ReportButtons value={reportChoice} onChange={onReportChange} />
 
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <button type="button" className="h-9 rounded bg-[#dfeef8] text-sm font-extrabold text-acspot-muted" onClick={onClose}>
+        <button type="button" className="h-9 rounded bg-[#dfeef8] text-sm font-extrabold text-acspot-muted" onClick={onClose} disabled={saving}>
           Cancel
         </button>
-        <button type="button" className="h-9 rounded bg-acspot-blue text-sm font-extrabold text-white" onClick={onSave}>
-          {actionLabel}
+        <button type="button" className="h-9 rounded bg-acspot-blue text-sm font-extrabold text-white disabled:opacity-60" onClick={onSave} disabled={saving}>
+          {saving ? "Saving..." : actionLabel}
         </button>
       </div>
     </aside>

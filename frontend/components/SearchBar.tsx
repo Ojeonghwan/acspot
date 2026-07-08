@@ -1,4 +1,4 @@
-﻿import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 
 type SearchBarProps = {
   value: string;

@@ -1,4 +1,4 @@
-﻿package com.acspot.domain.place;
+package com.acspot.domain.place;
 
 public enum SourceType {
     GOOGLE,

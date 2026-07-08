@@ -1,4 +1,7 @@
-﻿import { LocateFixed, Snowflake } from "lucide-react";
+"use client";
+
+import dynamic from "next/dynamic";
+import { LocateFixed, Snowflake } from "lucide-react";
 import type { Place } from "@/lib/types";
 
 type MapViewProps = {
@@ -7,7 +10,16 @@ type MapViewProps = {
   onSelect: (place: Place) => void;
 };
 
+const LeafletMap = dynamic(() => import("./LeafletMap").then((module) => module.LeafletMap), {
+  ssr: false,
+  loading: () => <FallbackMap places={[]} selectedPlace={null} onSelect={() => undefined} />
+});
+
 export function MapView({ places, selectedPlace, onSelect }: MapViewProps) {
+  return <LeafletMap places={places} selectedPlace={selectedPlace} onSelect={onSelect} />;
+}
+
+export function FallbackMap({ places, selectedPlace, onSelect }: MapViewProps) {
   return (
     <section className="relative min-h-0 flex-1 overflow-hidden border-t border-acspot-line bg-[#eef3f4]">
       <div className="absolute inset-0 opacity-90">
@@ -21,7 +33,7 @@ export function MapView({ places, selectedPlace, onSelect }: MapViewProps) {
         const selected = selectedPlace?.placeId === place.placeId;
         return (
           <button
-            key={place.placeId}
+            key={`${place.isRegistered ? "registered" : "external"}-${place.placeId}-${place.osmId ?? place.googlePlaceId ?? ""}`}
             type="button"
             aria-label={place.name}
             className={`absolute flex h-12 w-12 -translate-x-1/2 -translate-y-full items-center justify-center rounded-full rounded-bl-sm bg-acspot-blue text-white shadow-[0_3px_10px_rgba(0,115,153,0.35)] transition-transform ${selected ? "scale-125" : "scale-100"}`}

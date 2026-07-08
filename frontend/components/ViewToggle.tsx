@@ -1,4 +1,4 @@
-﻿import { List, Map } from "lucide-react";
+import { List, Map } from "lucide-react";
 import type { ViewMode } from "@/lib/types";
 
 type ViewToggleProps = {

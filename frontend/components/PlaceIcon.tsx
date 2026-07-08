@@ -1,4 +1,4 @@
-﻿import { Coffee, ShoppingBag, Utensils } from "lucide-react";
+import { Coffee, ShoppingBag, Utensils } from "lucide-react";
 import type { PlaceCategory } from "@/lib/types";
 
 type PlaceIconProps = {

@@ -1,16 +1,11 @@
-﻿package com.acspot.domain.summary;
+package com.acspot.domain.summary;
 
-import com.acspot.domain.place.Place;
 import com.acspot.domain.report.AcStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.MapsId;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -27,11 +22,6 @@ public class PlaceAcSummary {
     @Id
     @Column(name = "place_id")
     private Long placeId;
-
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "place_id")
-    private Place place;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "current_ac_status", nullable = false, length = 20)
@@ -58,4 +48,36 @@ public class PlaceAcSummary {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public static PlaceAcSummary empty(Long placeId) {
+        PlaceAcSummary summary = new PlaceAcSummary();
+        summary.placeId = placeId;
+        summary.currentAcStatus = AcStatus.UNKNOWN;
+        return summary;
+    }
+
+    public void refresh(
+            int availableCount,
+            int unavailableCount,
+            int unknownCount,
+            LocalDateTime lastReportedAt
+    ) {
+        this.availableCount = availableCount;
+        this.unavailableCount = unavailableCount;
+        this.unknownCount = unknownCount;
+        this.totalReportCount = availableCount + unavailableCount + unknownCount;
+        this.currentAcStatus = resolveCurrentStatus(availableCount, unavailableCount, unknownCount);
+        this.trustScore = Math.min(100, this.totalReportCount * 10);
+        this.lastReportedAt = lastReportedAt;
+    }
+
+    private AcStatus resolveCurrentStatus(int availableCount, int unavailableCount, int unknownCount) {
+        if (availableCount > unavailableCount && availableCount > unknownCount) {
+            return AcStatus.AVAILABLE;
+        }
+        if (unavailableCount > availableCount && unavailableCount > unknownCount) {
+            return AcStatus.UNAVAILABLE;
+        }
+        return AcStatus.UNKNOWN;
+    }
 }

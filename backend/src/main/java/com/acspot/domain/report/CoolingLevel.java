@@ -1,4 +1,4 @@
-﻿package com.acspot.domain.report;
+package com.acspot.domain.report;
 
 public enum CoolingLevel {
     STRONG,

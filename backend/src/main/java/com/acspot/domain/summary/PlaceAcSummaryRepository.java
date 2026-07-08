@@ -1,4 +1,4 @@
-﻿package com.acspot.domain.summary;
+package com.acspot.domain.summary;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

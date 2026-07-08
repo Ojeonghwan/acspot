@@ -1,4 +1,4 @@
-﻿import { PlaceCard } from "./PlaceCard";
+import { PlaceCard } from "./PlaceCard";
 import type { Place } from "@/lib/types";
 
 type PlaceListProps = {

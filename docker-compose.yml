@@ -1,4 +1,4 @@
-﻿services:
+services:
   db:
     image: postgis/postgis:16-3.4
     container_name: acspot-db
@@ -47,6 +47,7 @@
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - /app/.next
 
 volumes:
   acspot-db-data:

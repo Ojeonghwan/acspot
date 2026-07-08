@@ -1,10 +1,12 @@
-﻿export type PlaceCategory = "CAFE" | "RESTAURANT" | "MALL" | "HOTEL" | "PUBLIC" | "OTHER";
+export type PlaceCategory = "CAFE" | "RESTAURANT" | "MALL" | "HOTEL" | "PUBLIC" | "OTHER";
 
 export type CategoryFilter = "ALL" | "CAFE" | "RESTAURANT" | "MALL";
 
 export type AcStatus = "AVAILABLE" | "UNAVAILABLE" | "UNKNOWN" | "UNVERIFIED";
 
 export type ReportChoice = "AVAILABLE" | "UNKNOWN" | "UNAVAILABLE";
+
+export type CoolingLevel = "STRONG" | "NORMAL" | "WEAK" | "UNKNOWN";
 
 export type ViewMode = "map" | "list";
 
@@ -22,4 +24,8 @@ export type Place = {
   lastReportedAt: string | null;
   mapX: number;
   mapY: number;
+  isRegistered: boolean;
+  googlePlaceId?: string | null;
+  googleMapsUrl?: string | null;
+  osmId?: string | null;
 };

@@ -1,4 +1,4 @@
-﻿package com.acspot.domain.place;
+package com.acspot.domain.place;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +16,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 
 @Getter
 @Entity
@@ -28,6 +31,8 @@ import org.locationtech.jts.geom.Point;
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Place {
+
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -81,4 +86,40 @@ public class Place {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public static Place create(
+            SourceType sourceType,
+            String googlePlaceId,
+            String osmId,
+            String name,
+            PlaceCategory category,
+            String countryCode,
+            String city,
+            String address,
+            BigDecimal latitude,
+            BigDecimal longitude,
+            String googleMapsUrl
+    ) {
+        Place place = new Place();
+        place.sourceType = sourceType;
+        place.googlePlaceId = googlePlaceId;
+        place.osmId = osmId;
+        place.name = name;
+        place.category = category;
+        place.countryCode = countryCode;
+        place.city = city;
+        place.address = address;
+        place.latitude = latitude;
+        place.longitude = longitude;
+        place.location = createPoint(latitude, longitude);
+        place.googleMapsUrl = googleMapsUrl;
+        place.status = PlaceStatus.ACTIVE;
+        return place;
+    }
+
+    private static Point createPoint(BigDecimal latitude, BigDecimal longitude) {
+        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude.doubleValue(), latitude.doubleValue()));
+        point.setSRID(4326);
+        return point;
+    }
 }

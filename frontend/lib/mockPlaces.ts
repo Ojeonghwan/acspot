@@ -1,4 +1,4 @@
-﻿import type { Place } from "./types";
+import type { Place } from "./types";
 
 export const mockPlaces: Place[] = [
   {
@@ -14,7 +14,8 @@ export const mockPlaces: Place[] = [
     totalReportCount: 2,
     lastReportedAt: "30min ago",
     mapX: 18,
-    mapY: 18
+    mapY: 18,
+    isRegistered: true
   },
   {
     placeId: 2,
@@ -29,7 +30,8 @@ export const mockPlaces: Place[] = [
     totalReportCount: 2,
     lastReportedAt: "2d ago",
     mapX: 54,
-    mapY: 37
+    mapY: 37,
+    isRegistered: true
   },
   {
     placeId: 3,
@@ -44,7 +46,8 @@ export const mockPlaces: Place[] = [
     totalReportCount: 3,
     lastReportedAt: "22min ago",
     mapX: 83,
-    mapY: 59
+    mapY: 59,
+    isRegistered: true
   },
   {
     placeId: 4,
@@ -59,7 +62,8 @@ export const mockPlaces: Place[] = [
     totalReportCount: 2,
     lastReportedAt: "56min ago",
     mapX: 22,
-    mapY: 72
+    mapY: 72,
+    isRegistered: true
   },
   {
     placeId: 5,
@@ -74,7 +78,8 @@ export const mockPlaces: Place[] = [
     totalReportCount: 1,
     lastReportedAt: "380d ago",
     mapX: 25,
-    mapY: 74
+    mapY: 74,
+    isRegistered: true
   },
   {
     placeId: 6,
@@ -89,6 +94,7 @@ export const mockPlaces: Place[] = [
     totalReportCount: 0,
     lastReportedAt: null,
     mapX: 64,
-    mapY: 28
+    mapY: 28,
+    isRegistered: true
   }
 ];

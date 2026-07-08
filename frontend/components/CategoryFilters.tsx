@@ -1,4 +1,4 @@
-﻿import { Coffee, Landmark, ShoppingBag, Utensils } from "lucide-react";
+import { Coffee, Landmark, ShoppingBag, Utensils } from "lucide-react";
 import type { CategoryFilter } from "@/lib/types";
 
 const filters: Array<{ value: CategoryFilter; label: string; icon: typeof Coffee | null }> = [

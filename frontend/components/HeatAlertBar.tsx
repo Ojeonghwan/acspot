@@ -1,4 +1,4 @@
-﻿import { Flame } from "lucide-react";
+import { Flame } from "lucide-react";
 
 export function HeatAlertBar() {
   return (

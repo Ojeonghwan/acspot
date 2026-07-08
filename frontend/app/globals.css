@@ -1,4 +1,6 @@
-﻿@tailwind base;
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -28,4 +30,59 @@ input {
 
 button {
   -webkit-tap-highlight-color: transparent;
+}
+
+.leaflet-container {
+  background: #eef3f4;
+  font-family: inherit;
+}
+
+.leaflet-control-attribution {
+  border-radius: 999px 0 0 0;
+  color: #527797;
+  font-size: 10px;
+}
+
+.acspot-leaflet-marker {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.acspot-leaflet-marker span {
+  align-items: center;
+  background: #0797c9;
+  border: 2px solid #ffffff;
+  border-radius: 999px 999px 999px 6px;
+  box-shadow: 0 3px 10px rgba(0, 115, 153, 0.35);
+  color: #ffffff;
+  display: flex;
+  font-size: 28px;
+  font-weight: 900;
+  height: 48px;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: auto;
+  transform: rotate(-45deg);
+  transition: height 120ms ease, width 120ms ease, transform 120ms ease;
+  width: 48px;
+}
+
+.acspot-leaflet-marker span.is-selected {
+  height: 56px;
+  width: 56px;
+}
+
+.acspot-leaflet-marker span.is-unavailable {
+  background: #ff405a;
+}
+
+.acspot-leaflet-marker em {
+  display: block;
+  font-style: normal;
+  transform: rotate(45deg);
 }

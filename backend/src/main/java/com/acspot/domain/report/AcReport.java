@@ -1,4 +1,4 @@
-﻿package com.acspot.domain.report;
+package com.acspot.domain.report;
 
 import com.acspot.domain.place.Place;
 import jakarta.persistence.Column;
@@ -57,4 +57,18 @@ public class AcReport {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public static AcReport create(String anonymousId, Place place, AcStatus acStatus, CoolingLevel coolingLevel) {
+        AcReport report = new AcReport();
+        report.anonymousId = anonymousId;
+        report.place = place;
+        report.acStatus = acStatus;
+        report.coolingLevel = coolingLevel;
+        return report;
+    }
+
+    public void update(AcStatus acStatus, CoolingLevel coolingLevel) {
+        this.acStatus = acStatus;
+        this.coolingLevel = coolingLevel;
+    }
 }

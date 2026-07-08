@@ -1,4 +1,4 @@
-﻿import type { ReportChoice } from "@/lib/types";
+import type { ReportChoice } from "@/lib/types";
 
 type ReportButtonsProps = {
   value: ReportChoice | null;
