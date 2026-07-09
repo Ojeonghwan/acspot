@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CategoryFilters } from "./CategoryFilters";
 import { HeatAlertBar } from "./HeatAlertBar";
 import { MapView } from "./MapView";
@@ -10,14 +10,16 @@ import { SearchBar } from "./SearchBar";
 import { ViewToggle } from "./ViewToggle";
 import { fetchNearbyPlaces, fetchPlaceDetail, registerExternalPlace, saveAcReport, searchPlaces } from "@/lib/api";
 import { getAnonymousId } from "@/lib/anonymousId";
-import { searchOpenStreetMapPlaces } from "@/lib/osm";
+import { GOOGLE_PLACES_BOUNDS, type GoogleBounds } from "@/lib/googleMaps";
 import type { CategoryFilter, Place, ReportChoice, ViewMode } from "@/lib/types";
 
 export function ACSpotApp() {
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [category, setCategory] = useState<CategoryFilter>("ALL");
   const [query, setQuery] = useState("");
-  const [places, setPlaces] = useState<Place[]>([]);
+  const [registeredPlaces, setRegisteredPlaces] = useState<Place[]>([]);
+  const [poiPlaces, setPoiPlaces] = useState<Place[]>([]);
+  const [, setMapBounds] = useState<GoogleBounds>(GOOGLE_PLACES_BOUNDS);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [reportChoice, setReportChoice] = useState<ReportChoice | null>(null);
   const [anonymousId, setAnonymousId] = useState("");
@@ -34,49 +36,71 @@ export function ACSpotApp() {
     const controller = new AbortController();
     const normalized = query.trim();
 
-    async function loadPlaces() {
+    async function loadPrimaryPlaces() {
       setLoading(true);
       setError("");
       try {
-        const nextPlaces = normalized ? await searchAllPlaces(normalized) : await fetchNearbyPlaces();
+        if (normalized) {
+          const registeredResults = await searchPlaces(normalized);
+          if (!controller.signal.aborted) {
+            setRegisteredPlaces(registeredResults);
+            setPoiPlaces([]);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const nextRegisteredPlaces = await fetchNearbyPlaces();
         if (!controller.signal.aborted) {
-          setPlaces(nextPlaces);
+          setRegisteredPlaces(nextRegisteredPlaces);
+          setLoading(false);
         }
       } catch (apiError) {
         if (!controller.signal.aborted) {
           setError(apiError instanceof Error ? apiError.message : "Could not load places");
-          setPlaces([]);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
+          setRegisteredPlaces([]);
+          setPoiPlaces([]);
           setLoading(false);
         }
       }
     }
 
-    const timeoutId = window.setTimeout(loadPlaces, normalized ? 300 : 0);
+    const timeoutId = window.setTimeout(loadPrimaryPlaces, normalized ? 300 : 0);
     return () => {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
   }, [query]);
 
-  const filteredPlaces = useMemo(() => {
-    return places.filter((place) => category === "ALL" || place.category === category);
-  }, [category, places]);
+  const handlePoiPlacesChange = useCallback(
+    (places: Place[]) => {
+      if (query.trim()) {
+        return;
+      }
+      setPoiPlaces(removeRegisteredPoiDuplicates(registeredPlaces, places));
+    },
+    [query, registeredPlaces]
+  );
+
+  const filteredRegisteredPlaces = useMemo(() => filterByCategory(registeredPlaces, category), [category, registeredPlaces]);
+  const filteredPoiPlaces = useMemo(() => filterByCategory(poiPlaces, category), [category, poiPlaces]);
+  const filteredMapPlaces = useMemo(() => [...filteredRegisteredPlaces, ...filteredPoiPlaces], [filteredRegisteredPlaces, filteredPoiPlaces]);
+  const listPlaces = query.trim() ? filteredMapPlaces : filteredRegisteredPlaces;
 
   async function selectPlace(place: Place) {
     setSelectedPlace(place);
     setReportChoice(place.acStatus === "UNAVAILABLE" ? "UNAVAILABLE" : place.acStatus === "AVAILABLE" ? "AVAILABLE" : null);
 
+    if (!place.isRegistered) {
+      return;
+    }
+
     try {
-      const registeredPlace = place.isRegistered ? place : await registerCandidatePlace(place);
       if (!anonymousId) {
-        setSelectedPlace(registeredPlace);
         return;
       }
 
-      const detail = await fetchPlaceDetail(registeredPlace.placeId, anonymousId);
+      const detail = await fetchPlaceDetail(place.placeId, anonymousId);
       setSelectedPlace(detail);
       setReportChoice(detail.acStatus === "UNAVAILABLE" ? "UNAVAILABLE" : detail.acStatus === "AVAILABLE" ? "AVAILABLE" : null);
     } catch (apiError) {
@@ -101,22 +125,18 @@ export function ACSpotApp() {
     try {
       const place = selectedPlace.isRegistered ? selectedPlace : await registerCandidatePlace(selectedPlace);
       await saveAcReport(place.placeId, anonymousId, reportChoice);
+      const updatedPlace: Place = {
+        ...place,
+        isRegistered: true,
+        acStatus: reportChoice,
+        totalReportCount: Math.max(place.totalReportCount, 1),
+        lastReportedAt: "0min ago"
+      };
+
       showToast("Report saved");
       setSelectedPlace(null);
-      setPlaces((current) =>
-        current.map((item) =>
-          matchesPlace(item, place)
-            ? {
-                ...item,
-                placeId: place.placeId,
-                isRegistered: true,
-                acStatus: reportChoice,
-                totalReportCount: Math.max(item.totalReportCount, 1),
-                lastReportedAt: "0min ago"
-              }
-            : item
-        )
-      );
+      setRegisteredPlaces((current) => [...current.filter((item) => !matchesPlace(item, updatedPlace)), updatedPlace]);
+      setPoiPlaces((current) => current.filter((item) => !matchesPlace(item, updatedPlace)));
       refreshCurrentList();
     } catch (apiError) {
       showToast(apiError instanceof Error ? apiError.message : "Could not save report");
@@ -139,8 +159,16 @@ export function ACSpotApp() {
   async function refreshCurrentList() {
     try {
       const normalized = query.trim();
-      const nextPlaces = normalized ? await searchAllPlaces(normalized) : await fetchNearbyPlaces();
-      setPlaces(nextPlaces);
+      if (normalized) {
+        const registeredResults = await searchPlaces(normalized);
+        setRegisteredPlaces(registeredResults);
+        setPoiPlaces([]);
+        return;
+      }
+
+      const nextRegisteredPlaces = await fetchNearbyPlaces();
+      setRegisteredPlaces(nextRegisteredPlaces);
+      setPoiPlaces((current) => removeRegisteredPoiDuplicates(nextRegisteredPlaces, current));
     } catch {
       // The optimistic update above keeps the UI responsive if refresh fails.
     }
@@ -152,7 +180,7 @@ export function ACSpotApp() {
   }
 
   const showingSearch = query.trim().length > 0;
-  const listTitle = showingSearch ? "Results" : `Cool spots nearby - ${filteredPlaces.length}`;
+  const listTitle = showingSearch ? "Results" : `Cool spots nearby - ${filteredRegisteredPlaces.length}`;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#dbeaf2] text-acspot-text">
@@ -175,15 +203,22 @@ export function ACSpotApp() {
         ) : error ? (
           <StatusPanel message={error} />
         ) : showingSearch || viewMode === "list" ? (
-          filteredPlaces.length ? (
-            <PlaceList places={filteredPlaces} title={listTitle} onSelect={selectPlace} />
+          listPlaces.length ? (
+            <PlaceList places={listPlaces} title={listTitle} onSelect={selectPlace} />
           ) : (
             <StatusPanel message="No results found" />
           )
-        ) : filteredPlaces.length ? (
-          <MapView places={filteredPlaces} selectedPlace={selectedPlace} onSelect={selectPlace} />
+        ) : filteredMapPlaces.length ? (
+          <MapView
+            registeredPlaces={filteredRegisteredPlaces}
+            poiPlaces={filteredPoiPlaces}
+            selectedPlace={selectedPlace}
+            onSelect={selectPlace}
+            onBoundsChange={setMapBounds}
+            onPoiPlacesChange={handlePoiPlacesChange}
+          />
         ) : (
-          <StatusPanel message="No cool spots nearby yet" />
+          <StatusPanel message="No nearby places yet" />
         )}
 
         <PlaceBottomSheet
@@ -205,12 +240,23 @@ export function ACSpotApp() {
   );
 }
 
-async function searchAllPlaces(keyword: string): Promise<Place[]> {
-  const registeredPlaces = await searchPlaces(keyword);
-  const osmPlaces = await searchOpenStreetMapPlaces(keyword);
+function filterByCategory(places: Place[], category: CategoryFilter): Place[] {
+  return places.filter((place) => category === "ALL" || place.category === category);
+}
+
+function removeRegisteredPoiDuplicates(registeredPlaces: Place[], poiPlaces: Place[]): Place[] {
   const registeredOsmIds = new Set(registeredPlaces.map((place) => place.osmId).filter(Boolean));
-  const newOsmPlaces = osmPlaces.filter((place) => !place.osmId || !registeredOsmIds.has(place.osmId));
-  return [...registeredPlaces, ...newOsmPlaces];
+  const registeredNames = new Set(registeredPlaces.map((place) => normalizeName(place.name)));
+  return poiPlaces.filter((place) => {
+    if (place.osmId && registeredOsmIds.has(place.osmId)) {
+      return false;
+    }
+    return !registeredNames.has(normalizeName(place.name));
+  });
+}
+
+function normalizeName(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function matchesPlace(a: Place, b: Place): boolean {

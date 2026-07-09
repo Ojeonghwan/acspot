@@ -1,4 +1,4 @@
-@import "leaflet/dist/leaflet.css";
+﻿@import "leaflet/dist/leaflet.css";
 
 @tailwind base;
 @tailwind components;
@@ -85,4 +85,26 @@ button {
   display: block;
   font-style: normal;
   transform: rotate(45deg);
+}
+.acspot-leaflet-marker.is-external span {
+  background: #dff5ff;
+  border: 3px solid #0797c9;
+  box-shadow: 0 3px 10px rgba(0, 115, 153, 0.3);
+  height: 38px;
+  opacity: 0.98;
+  width: 38px;
+}
+
+.acspot-leaflet-marker.is-external span::after {
+  background: #0797c9;
+  border-radius: 999px;
+  content: "";
+  height: 13px;
+  transform: rotate(45deg);
+  width: 13px;
+}
+
+.acspot-leaflet-marker.is-external span.is-selected {
+  height: 48px;
+  width: 48px;
 }

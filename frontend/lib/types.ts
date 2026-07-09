@@ -28,4 +28,8 @@ export type Place = {
   googlePlaceId?: string | null;
   googleMapsUrl?: string | null;
   osmId?: string | null;
+  sourceLabel?: string | null;
+  openingHours?: string | null;
+  phone?: string | null;
+  website?: string | null;
 };

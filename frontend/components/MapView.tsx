@@ -2,24 +2,38 @@
 
 import dynamic from "next/dynamic";
 import { LocateFixed, Snowflake } from "lucide-react";
+import type { GoogleBounds } from "@/lib/googleMaps";
 import type { Place } from "@/lib/types";
 
 type MapViewProps = {
-  places: Place[];
+  registeredPlaces: Place[];
+  poiPlaces: Place[];
   selectedPlace: Place | null;
   onSelect: (place: Place) => void;
+  onBoundsChange?: (bounds: GoogleBounds) => void;
+  onPoiPlacesChange?: (places: Place[]) => void;
 };
 
-const LeafletMap = dynamic(() => import("./LeafletMap").then((module) => module.LeafletMap), {
+const GoogleMap = dynamic(() => import("./GoogleMap").then((module) => module.GoogleMap), {
   ssr: false,
-  loading: () => <FallbackMap places={[]} selectedPlace={null} onSelect={() => undefined} />
+  loading: () => <FallbackMap registeredPlaces={[]} poiPlaces={[]} selectedPlace={null} onSelect={() => undefined} />
 });
 
-export function MapView({ places, selectedPlace, onSelect }: MapViewProps) {
-  return <LeafletMap places={places} selectedPlace={selectedPlace} onSelect={onSelect} />;
+export function MapView({ registeredPlaces, poiPlaces, selectedPlace, onSelect, onBoundsChange, onPoiPlacesChange }: MapViewProps) {
+  return (
+    <GoogleMap
+      registeredPlaces={registeredPlaces}
+      poiPlaces={poiPlaces}
+      selectedPlace={selectedPlace}
+      onSelect={onSelect}
+      onBoundsChange={onBoundsChange}
+      onPoiPlacesChange={onPoiPlacesChange}
+    />
+  );
 }
 
-export function FallbackMap({ places, selectedPlace, onSelect }: MapViewProps) {
+export function FallbackMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect }: MapViewProps) {
+  const places = [...registeredPlaces, ...poiPlaces];
   return (
     <section className="relative min-h-0 flex-1 overflow-hidden border-t border-acspot-line bg-[#eef3f4]">
       <div className="absolute inset-0 opacity-90">

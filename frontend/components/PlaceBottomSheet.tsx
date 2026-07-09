@@ -1,4 +1,4 @@
-import { Clock, Users, X } from "lucide-react";
+import { Clock, Globe, Phone, Users, X } from "lucide-react";
 import { AcStatusBadge } from "./AcStatusBadge";
 import { PlaceIcon } from "./PlaceIcon";
 import { ReportButtons } from "./ReportButtons";
@@ -20,9 +20,10 @@ export function PlaceBottomSheet({ place, reportChoice, saving = false, onReport
 
   const actionLabel = place.acStatus === "UNVERIFIED" ? "Register" : "Save";
   const title = place.acStatus === "UNVERIFIED" ? "Register a place" : place.name;
+  const infoItems = [place.sourceLabel, formatCategory(place.category), place.openingHours].filter(Boolean);
 
   return (
-    <aside className="absolute inset-x-0 bottom-0 z-20 rounded-t-[22px] bg-white px-4 pb-8 pt-3 shadow-[0_-6px_24px_rgba(30,59,87,0.16)]">
+    <aside className="absolute inset-x-0 bottom-0 z-[1200] rounded-t-[22px] bg-white px-4 pb-8 pt-3 shadow-[0_-6px_24px_rgba(30,59,87,0.16)]">
       <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-[#d9ebf7]" />
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-lg font-extrabold text-acspot-text">{title}</h2>
@@ -36,8 +37,26 @@ export function PlaceBottomSheet({ place, reportChoice, saving = false, onReport
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-extrabold text-acspot-text">{place.name}</h3>
           <p className="truncate text-sm font-medium text-acspot-muted">{place.address}</p>
+          {infoItems.length ? <p className="mt-1 truncate text-xs font-bold text-acspot-muted">{infoItems.join(" · ")}</p> : null}
         </div>
       </div>
+
+      {place.phone || place.website ? (
+        <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-acspot-muted">
+          {place.phone ? (
+            <span className="flex items-center gap-1 rounded-full bg-[#eef7fc] px-2 py-1">
+              <Phone size={12} />
+              {place.phone}
+            </span>
+          ) : null}
+          {place.website ? (
+            <span className="flex min-w-0 items-center gap-1 rounded-full bg-[#eef7fc] px-2 py-1">
+              <Globe size={12} />
+              <span className="max-w-[210px] truncate">{shortenUrl(place.website)}</span>
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <AcStatusBadge status={place.acStatus} />
@@ -67,4 +86,17 @@ export function PlaceBottomSheet({ place, reportChoice, saving = false, onReport
       </div>
     </aside>
   );
+}
+
+function formatCategory(category: Place["category"]): string {
+  return category.charAt(0) + category.slice(1).toLowerCase();
+}
+
+function shortenUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return value;
+  }
 }

@@ -130,7 +130,7 @@ export async function registerExternalPlace(place: Place): Promise<number> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      sourceType: place.osmId ? "OSM" : "MANUAL",
+      sourceType: place.googlePlaceId ? "GOOGLE" : place.osmId ? "OSM" : "MANUAL",
       googlePlaceId: place.googlePlaceId,
       osmId: place.osmId,
       name: place.name,
