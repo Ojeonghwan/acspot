@@ -208,7 +208,7 @@ export function ACSpotApp() {
           ) : (
             <StatusPanel message="No results found" />
           )
-        ) : filteredMapPlaces.length ? (
+        ) : (
           <MapView
             registeredPlaces={filteredRegisteredPlaces}
             poiPlaces={filteredPoiPlaces}
@@ -217,8 +217,6 @@ export function ACSpotApp() {
             onBoundsChange={setMapBounds}
             onPoiPlacesChange={handlePoiPlacesChange}
           />
-        ) : (
-          <StatusPanel message="No nearby places yet" />
         )}
 
         <PlaceBottomSheet
