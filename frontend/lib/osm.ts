@@ -87,7 +87,7 @@ export async function fetchOpenStreetMapPlacesInBounds(bounds: OsmBounds, limit 
   let data: OverpassResponse;
   try {
     const response = await Promise.race<Response | null>([
-      fetch(`${API_BASE_URL}/api/external/osm/places?${params.toString()}`, {
+      fetch(`${getApiBaseUrl()}/api/external/osm/places?${params.toString()}`, {
         headers: { Accept: "application/json" }
       }),
       new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 2500))
@@ -109,6 +109,13 @@ export async function fetchOpenStreetMapPlacesInBounds(bounds: OsmBounds, limit 
 
   return places.length ? places : fallbackOpenStreetMapPlaces(limit, bounds);
 
+}
+
+function getApiBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location.protocol === "https:" && API_BASE_URL.startsWith("http://")) {
+    return "";
+  }
+  return API_BASE_URL;
 }
 
 const FALLBACK_OSM_PLACES: Array<{

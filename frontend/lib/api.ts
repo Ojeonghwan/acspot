@@ -155,7 +155,7 @@ export async function saveAcReport(placeId: number, anonymousId: string, acStatu
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
@@ -175,6 +175,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+function getApiBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location.protocol === "https:" && API_BASE_URL.startsWith("http://")) {
+    return "";
+  }
+  return API_BASE_URL;
 }
 
 function toPlace(item: NearbyPlaceItem, googlePlaceId?: string | null, googleMapsUrl?: string | null, osmId?: string | null): Place {
