@@ -3,6 +3,27 @@
 이 저장소에는 Jenkins가 읽을 `Jenkinsfile`이 포함되어 있습니다.
 GitHub `main` 브랜치에 push가 들어오면 Jenkins가 빌드 검증 후 서버에 접속해서 Docker Compose로 재배포하는 구조입니다.
 
+## 서버 내 Jenkins 자동 구성
+
+현재 저장소에는 Jenkins를 Docker로 실행하기 위한 파일도 포함되어 있습니다.
+
+- `docker-compose.jenkins.yml`
+- `jenkins/Dockerfile`
+- `jenkins/plugins.txt`
+- `jenkins/init.groovy.d/`
+
+서버의 `/opt/acspot/.env.jenkins`에 관리자 계정 정보를 만든 뒤 실행합니다.
+
+```bash
+cd /opt/acspot
+docker compose --env-file .env.jenkins -f docker-compose.jenkins.yml up --build -d
+```
+
+Jenkins는 `http://SERVER_IP:8081`에서 열립니다.
+
+이 구성은 GitHub webhook이 없어도 Jenkins가 2분마다 GitHub 저장소를 확인합니다.
+Webhook을 연결하면 push 직후 더 빠르게 실행됩니다.
+
 ## 필요한 Jenkins 설정
 
 1. Jenkins에 플러그인 설치
