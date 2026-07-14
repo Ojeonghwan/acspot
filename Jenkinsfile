@@ -53,6 +53,7 @@ pipeline {
           if (env.DEPLOY_MODE == 'local') {
             sh """
               set -e
+              git config --global --add safe.directory ${DEPLOY_PATH}
               cd ${DEPLOY_PATH}
               git fetch origin ${DEPLOY_BRANCH}
               git reset --hard origin/${DEPLOY_BRANCH}
@@ -65,6 +66,7 @@ pipeline {
               sh """
                 ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
                   set -e
+                  git config --global --add safe.directory ${DEPLOY_PATH}
                   cd ${DEPLOY_PATH}
                   git fetch origin ${DEPLOY_BRANCH}
                   git reset --hard origin/${DEPLOY_BRANCH}
