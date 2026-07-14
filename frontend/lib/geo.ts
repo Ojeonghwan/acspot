@@ -11,7 +11,7 @@ export function formatRelativeTime(value: string | null): string | null {
   if (!value) {
     return null;
   }
-  const reportedAt = new Date(value);
+  const reportedAt = parseServerTimestamp(value);
   if (Number.isNaN(reportedAt.getTime())) {
     return value;
   }
@@ -26,6 +26,15 @@ export function formatRelativeTime(value: string | null): string | null {
     return `${hours}h ago`;
   }
   return `${Math.round(hours / 24)}d ago`;
+}
+
+function parseServerTimestamp(value: string): Date {
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
+  if (hasTimezone) {
+    return new Date(value);
+  }
+
+  return new Date(`${value}Z`);
 }
 
 export function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {

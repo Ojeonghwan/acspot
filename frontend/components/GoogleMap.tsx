@@ -26,6 +26,8 @@ export function GoogleMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect
   const markersRef = useRef<MarkerRecord[]>([]);
   const idleTimeoutRef = useRef<number | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,15 +99,15 @@ export function GoogleMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect
       return;
     }
 
-    markersRef.current.forEach(({ marker }) => marker.setMap(null));
+    markersRef.current.forEach(({ marker }) => {
+      if (typeof marker.setMap === "function") {
+        marker.setMap(null);
+      } else {
+        marker.map = null;
+      }
+    });
     markersRef.current = [...poiPlaces, ...registeredPlaces].map((place) => {
-      const marker = new google.maps.Marker({
-        map,
-        position: { lat: place.latitude, lng: place.longitude },
-        title: place.name,
-        zIndex: place.isRegistered ? 20 : 10,
-        icon: createMarkerIcon(place, Boolean(selectedPlace && isSamePlace(selectedPlace, place)))
-      });
+      const marker = createPlaceMarker(google, map, place, Boolean(selectedPlace && isSamePlace(selectedPlace, place)));
 
       marker.addListener("click", async () => {
         const nextPlace = place.isRegistered ? place : await fetchGooglePlaceDetails(map, place);
@@ -176,6 +178,50 @@ export function GoogleMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect
     }, 450);
   }
 
+  function moveToMyLocation() {
+    const map = mapRef.current;
+    setLocationError("");
+
+    if (!map) {
+      setLocationError("Map is not ready yet");
+      return;
+    }
+
+    const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+    if (!window.isSecureContext && !isLocalhost) {
+      setLocationError("Location needs HTTPS, except on localhost");
+      return;
+    }
+
+    if (!navigator?.geolocation) {
+      setLocationError("Location is not available in this browser");
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
+        map.setCenter(currentPosition);
+        map.setZoom(15);
+        setLocating(false);
+      },
+      (error) => {
+        setLocating(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationError("Allow location permission to use this button");
+          return;
+        }
+        if (error.code === error.TIMEOUT) {
+          setLocationError("Could not get your location in time");
+          return;
+        }
+        setLocationError("Could not get your current location");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
   return (
     <section className="relative min-h-0 flex-1 overflow-hidden border-t border-acspot-line bg-[#eef3f4]">
       <div ref={containerRef} className="h-full w-full" />
@@ -189,38 +235,59 @@ export function GoogleMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect
       <button
         type="button"
         className="absolute bottom-20 right-4 z-10 flex h-10 items-center gap-1.5 rounded-full border border-acspot-line bg-white px-4 text-sm font-extrabold text-acspot-blue shadow-[0_2px_8px_rgba(46,84,116,0.16)]"
-        onClick={() => {
-          const map = mapRef.current;
-          if (!map || !navigator.geolocation) {
-            return;
-          }
-          navigator.geolocation.getCurrentPosition((position) => {
-            map.setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
-            map.setZoom(15);
-          });
-        }}
+        onClick={moveToMyLocation}
+        disabled={locating}
       >
         <LocateFixed size={17} />
-        My location
+        {locating ? "Locating..." : "My location"}
       </button>
+
+      {locationError ? (
+        <div className="absolute bottom-32 right-4 z-10 max-w-[240px] rounded-lg border border-acspot-line bg-white px-3 py-2 text-xs font-bold text-acspot-muted shadow-[0_2px_8px_rgba(46,84,116,0.16)]">
+          {locationError}
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function createMarkerIcon(place: Place, selected: boolean) {
-  const isRegistered = place.isRegistered;
-  const color = place.acStatus === "UNAVAILABLE" ? "#ff405a" : isRegistered ? "#0797c9" : "#dff5ff";
-  const strokeColor = isRegistered ? "#ffffff" : "#0797c9";
-  const scale = selected ? 1.25 : isRegistered ? 1 : 0.72;
+function createPlaceMarker(google: any, map: any, place: Place, selected: boolean) {
+  const position = { lat: place.latitude, lng: place.longitude };
+  const hasAc = place.acStatus === "AVAILABLE";
+
+  return new google.maps.Marker({
+    map,
+    position,
+    title: place.name,
+    zIndex: place.isRegistered ? 20 : 10,
+    icon: createMarkerIcon(google, place, selected),
+    label: hasAc
+      ? {
+          text: "✳",
+          color: "#ffffff",
+          fontSize: selected ? "30px" : "26px",
+          fontWeight: "900"
+        }
+      : undefined
+  });
+}
+
+function createMarkerIcon(google: any, place: Place, selected: boolean) {
+  const hasAc = place.acStatus === "AVAILABLE";
+  const unavailable = place.acStatus === "UNAVAILABLE";
+  const fillColor = hasAc ? "#0797c9" : unavailable ? "#ff405a" : "#dff5ff";
+  const strokeColor = hasAc || unavailable ? "#ffffff" : "#0797c9";
+  const scale = selected ? 1.28 : hasAc || place.isRegistered ? 1.08 : 0.84;
 
   return {
     path: "M 0 -24 C 12 -24 22 -14 22 -2 C 22 14 0 28 0 28 C 0 28 -22 14 -22 -2 C -22 -14 -12 -24 0 -24 Z",
-    fillColor: color,
+    fillColor,
     fillOpacity: 1,
     strokeColor,
-    strokeWeight: isRegistered ? 3 : 4,
+    strokeWeight: hasAc || unavailable ? 3 : 4,
     scale,
-    anchor: new (window as any).google.maps.Point(0, 28)
+    labelOrigin: new google.maps.Point(0, -3),
+    anchor: new google.maps.Point(0, 28)
   };
 }
 
