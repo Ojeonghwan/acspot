@@ -11,7 +11,7 @@ import { ViewToggle } from "./ViewToggle";
 import { fetchNearbyPlaces, fetchPlaceDetail, registerExternalPlace, saveAcReport, searchPlaces } from "@/lib/api";
 import { getAnonymousId } from "@/lib/anonymousId";
 import { GOOGLE_PLACES_BOUNDS, type GoogleBounds } from "@/lib/googleMaps";
-import type { CategoryFilter, Place, ReportChoice, ViewMode } from "@/lib/types";
+import type { CategoryFilter, MapCamera, Place, ReportChoice, ViewMode } from "@/lib/types";
 
 export function ACSpotApp() {
   const [viewMode, setViewMode] = useState<ViewMode>("map");
@@ -20,6 +20,8 @@ export function ACSpotApp() {
   const [registeredPlaces, setRegisteredPlaces] = useState<Place[]>([]);
   const [poiPlaces, setPoiPlaces] = useState<Place[]>([]);
   const [, setMapBounds] = useState<GoogleBounds>(GOOGLE_PLACES_BOUNDS);
+  const [mapCamera, setMapCamera] = useState<MapCamera | null>(null);
+  const [initialLocationAttempted, setInitialLocationAttempted] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [reportChoice, setReportChoice] = useState<ReportChoice | null>(null);
   const [anonymousId, setAnonymousId] = useState("");
@@ -213,8 +215,12 @@ export function ACSpotApp() {
             registeredPlaces={filteredRegisteredPlaces}
             poiPlaces={filteredPoiPlaces}
             selectedPlace={selectedPlace}
+            initialCamera={mapCamera}
+            shouldUseInitialGeolocation={!mapCamera && !initialLocationAttempted}
             onSelect={selectPlace}
             onBoundsChange={setMapBounds}
+            onCameraChange={setMapCamera}
+            onInitialGeolocationAttempt={() => setInitialLocationAttempted(true)}
             onPoiPlacesChange={handlePoiPlacesChange}
           />
         )}

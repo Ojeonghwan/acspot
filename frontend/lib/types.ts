@@ -10,6 +10,12 @@ export type CoolingLevel = "STRONG" | "NORMAL" | "WEAK" | "UNKNOWN";
 
 export type ViewMode = "map" | "list";
 
+export type MapCamera = {
+  latitude: number;
+  longitude: number;
+  zoom: number;
+};
+
 export type Place = {
   placeId: number;
   name: string;

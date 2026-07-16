@@ -4,14 +4,18 @@ import { LocateFixed } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { PARIS_CENTER } from "@/lib/geo";
 import { fetchGooglePlaceDetails, fetchGooglePlacesInBounds, hasGoogleMapsKey, loadGoogleMaps, type GoogleBounds } from "@/lib/googleMaps";
-import type { Place } from "@/lib/types";
+import type { MapCamera, Place } from "@/lib/types";
 
 type GoogleMapProps = {
   registeredPlaces: Place[];
   poiPlaces: Place[];
   selectedPlace: Place | null;
+  initialCamera?: MapCamera | null;
+  shouldUseInitialGeolocation?: boolean;
   onSelect: (place: Place) => void;
   onBoundsChange?: (bounds: GoogleBounds) => void;
+  onCameraChange?: (camera: MapCamera) => void;
+  onInitialGeolocationAttempt?: () => void;
   onPoiPlacesChange?: (places: Place[]) => void;
 };
 
@@ -20,7 +24,18 @@ type MarkerRecord = {
   place: Place;
 };
 
-export function GoogleMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect, onBoundsChange, onPoiPlacesChange }: GoogleMapProps) {
+export function GoogleMap({
+  registeredPlaces,
+  poiPlaces,
+  selectedPlace,
+  initialCamera,
+  shouldUseInitialGeolocation,
+  onSelect,
+  onBoundsChange,
+  onCameraChange,
+  onInitialGeolocationAttempt,
+  onPoiPlacesChange
+}: GoogleMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<MarkerRecord[]>([]);
@@ -49,8 +64,8 @@ export function GoogleMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect
         }
 
         const map = new google.maps.Map(containerRef.current, {
-          center: { lat: PARIS_CENTER.latitude, lng: PARIS_CENTER.longitude },
-          zoom: 14,
+          center: initialCamera ? { lat: initialCamera.latitude, lng: initialCamera.longitude } : { lat: PARIS_CENTER.latitude, lng: PARIS_CENTER.longitude },
+          zoom: initialCamera?.zoom ?? 14,
           minZoom: 12,
           maxZoom: 19,
           clickableIcons: true,
@@ -75,7 +90,11 @@ export function GoogleMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect
           openGoogleMapPoi(event.placeId);
         });
 
-        emitVisiblePlaces();
+        if (shouldUseInitialGeolocation) {
+          attemptInitialGeolocation(map);
+        } else {
+          emitVisiblePlaces();
+        }
       } catch (error) {
         if (!cancelled) {
           setLoadError(error instanceof Error ? error.message : "Could not load Google Maps");
@@ -170,12 +189,43 @@ export function GoogleMap({ registeredPlaces, poiPlaces, selectedPlace, onSelect
         return;
       }
 
+      const camera = getMapCamera(map);
+      if (camera) {
+        onCameraChange?.(camera);
+      }
       onBoundsChange?.(bounds);
       if (onPoiPlacesChange) {
         const places = await fetchGooglePlacesInBounds(map, bounds, 40);
         onPoiPlacesChange(places);
       }
     }, 450);
+  }
+
+  function attemptInitialGeolocation(map: any) {
+    onInitialGeolocationAttempt?.();
+
+    const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+    if (!window.isSecureContext && !isLocalhost) {
+      emitVisiblePlaces();
+      return;
+    }
+
+    if (!navigator?.geolocation) {
+      emitVisiblePlaces();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        map.setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
+        map.setZoom(15);
+        emitVisiblePlaces();
+      },
+      () => {
+        emitVisiblePlaces();
+      },
+      { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 }
+    );
   }
 
   function moveToMyLocation() {
@@ -263,7 +313,7 @@ function createPlaceMarker(google: any, map: any, place: Place, selected: boolea
     icon: createMarkerIcon(google, place, selected),
     label: hasAc
       ? {
-          text: "✳",
+          text: "\u2733",
           color: "#ffffff",
           fontSize: selected ? "30px" : "26px",
           fontWeight: "900"
@@ -288,6 +338,20 @@ function createMarkerIcon(google: any, place: Place, selected: boolean) {
     scale,
     labelOrigin: new google.maps.Point(0, -3),
     anchor: new google.maps.Point(0, 28)
+  };
+}
+
+function getMapCamera(map: any): MapCamera | null {
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+  if (!center || typeof zoom !== "number") {
+    return null;
+  }
+
+  return {
+    latitude: center.lat(),
+    longitude: center.lng(),
+    zoom
   };
 }
 

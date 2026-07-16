@@ -3,14 +3,18 @@
 import dynamic from "next/dynamic";
 import { LocateFixed, Snowflake } from "lucide-react";
 import type { GoogleBounds } from "@/lib/googleMaps";
-import type { Place } from "@/lib/types";
+import type { MapCamera, Place } from "@/lib/types";
 
 type MapViewProps = {
   registeredPlaces: Place[];
   poiPlaces: Place[];
   selectedPlace: Place | null;
+  initialCamera?: MapCamera | null;
+  shouldUseInitialGeolocation?: boolean;
   onSelect: (place: Place) => void;
   onBoundsChange?: (bounds: GoogleBounds) => void;
+  onCameraChange?: (camera: MapCamera) => void;
+  onInitialGeolocationAttempt?: () => void;
   onPoiPlacesChange?: (places: Place[]) => void;
 };
 
@@ -19,14 +23,29 @@ const GoogleMap = dynamic(() => import("./GoogleMap").then((module) => module.Go
   loading: () => <FallbackMap registeredPlaces={[]} poiPlaces={[]} selectedPlace={null} onSelect={() => undefined} />
 });
 
-export function MapView({ registeredPlaces, poiPlaces, selectedPlace, onSelect, onBoundsChange, onPoiPlacesChange }: MapViewProps) {
+export function MapView({
+  registeredPlaces,
+  poiPlaces,
+  selectedPlace,
+  initialCamera,
+  shouldUseInitialGeolocation,
+  onSelect,
+  onBoundsChange,
+  onCameraChange,
+  onInitialGeolocationAttempt,
+  onPoiPlacesChange
+}: MapViewProps) {
   return (
     <GoogleMap
       registeredPlaces={registeredPlaces}
       poiPlaces={poiPlaces}
       selectedPlace={selectedPlace}
+      initialCamera={initialCamera}
+      shouldUseInitialGeolocation={shouldUseInitialGeolocation}
       onSelect={onSelect}
       onBoundsChange={onBoundsChange}
+      onCameraChange={onCameraChange}
+      onInitialGeolocationAttempt={onInitialGeolocationAttempt}
       onPoiPlacesChange={onPoiPlacesChange}
     />
   );
