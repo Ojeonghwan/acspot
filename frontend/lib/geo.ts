@@ -1,4 +1,4 @@
-export const PARIS_CENTER = { latitude: 48.8566, longitude: 2.3522 };
+export const DEFAULT_CENTER = { latitude: 36.9940788, longitude: 127.0896413 };
 
 export function formatDistance(distanceMeters: number): string {
   if (distanceMeters < 1000) {
@@ -49,11 +49,11 @@ export function calculateDistanceMeters(lat1: number, lng1: number, lat2: number
 }
 
 export function longitudeToX(longitude: number): number {
-  return clamp(50 + (longitude - PARIS_CENTER.longitude) * 2200, 12, 88);
+  return clamp(50 + (longitude - DEFAULT_CENTER.longitude) * 2200, 12, 88);
 }
 
 export function latitudeToY(latitude: number): number {
-  return clamp(50 - (latitude - PARIS_CENTER.latitude) * 3000, 14, 82);
+  return clamp(50 - (latitude - DEFAULT_CENTER.latitude) * 3000, 14, 82);
 }
 
 function toRadians(value: number): number {

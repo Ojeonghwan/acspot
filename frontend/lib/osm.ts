@@ -1,4 +1,4 @@
-import { calculateDistanceMeters, formatDistance, latitudeToY, longitudeToX, PARIS_CENTER } from "./geo";
+import { calculateDistanceMeters, DEFAULT_CENTER, formatDistance, latitudeToY, longitudeToX } from "./geo";
 import type { Place, PlaceCategory } from "./types";
 
 type NominatimPlace = {
@@ -157,7 +157,7 @@ function fallbackOpenStreetMapPlaces(limit: number, bounds?: OsmBounds): Place[]
     : FALLBACK_OSM_PLACES;
 
   return visiblePlaces.slice(0, limit).map((item) => {
-    const distanceMeters = calculateDistanceMeters(PARIS_CENTER.latitude, PARIS_CENTER.longitude, item.latitude, item.longitude);
+    const distanceMeters = calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, item.latitude, item.longitude);
     return {
       placeId: -stableExternalId(item.osmId),
       name: item.name,
@@ -187,7 +187,7 @@ export function getFallbackOpenStreetMapPlacesInBounds(bounds: OsmBounds, limit 
 function toPlace(item: NominatimPlace): Place {
   const latitude = Number(item.lat);
   const longitude = Number(item.lon);
-  const distanceMeters = calculateDistanceMeters(PARIS_CENTER.latitude, PARIS_CENTER.longitude, latitude, longitude);
+  const distanceMeters = calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, latitude, longitude);
   const name = item.name ?? item.address?.amenity ?? item.address?.shop ?? item.display_name.split(",")[0] ?? "Unnamed place";
 
   return {
@@ -220,7 +220,7 @@ function toPlaceFromOverpass(item: OverpassElement): Place | null {
     return null;
   }
 
-  const distanceMeters = calculateDistanceMeters(PARIS_CENTER.latitude, PARIS_CENTER.longitude, latitude, longitude);
+  const distanceMeters = calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, latitude, longitude);
   const osmId = `${item.type}:${item.id}`;
 
   return {

@@ -4,7 +4,7 @@ import L from "leaflet";
 import { LocateFixed } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
-import { PARIS_CENTER } from "@/lib/geo";
+import { DEFAULT_CENTER } from "@/lib/geo";
 import type { OsmBounds } from "@/lib/osm";
 import type { Place } from "@/lib/types";
 
@@ -24,7 +24,7 @@ export function LeafletMap({ registeredPlaces, poiPlaces, selectedPlace, onSelec
   return (
     <section className="relative min-h-0 flex-1 overflow-hidden border-t border-acspot-line bg-[#eef3f4]">
       <MapContainer
-        center={[PARIS_CENTER.latitude, PARIS_CENTER.longitude]}
+        center={[DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude]}
         zoom={14}
         minZoom={12}
         maxZoom={18}

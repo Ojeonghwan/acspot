@@ -1,6 +1,6 @@
 "use client";
 
-import { calculateDistanceMeters, formatDistance, latitudeToY, longitudeToX, PARIS_CENTER } from "./geo";
+import { calculateDistanceMeters, DEFAULT_CENTER, formatDistance, latitudeToY, longitudeToX } from "./geo";
 import type { Place, PlaceCategory } from "./types";
 
 export type GoogleBounds = {
@@ -154,7 +154,7 @@ export function fetchGooglePlaceDetails(map: any, place: Place): Promise<Place> 
           name: result.name ?? place.name,
           category: result.types ? toCategory(result.types) : place.category,
           address: result.formatted_address ?? place.address,
-          distanceText: formatDistance(calculateDistanceMeters(PARIS_CENTER.latitude, PARIS_CENTER.longitude, latitude, longitude)),
+          distanceText: formatDistance(calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, latitude, longitude)),
           latitude,
           longitude,
           openingHours: result.opening_hours?.isOpen ? (result.opening_hours.isOpen() ? "Open now" : "Closed now") : place.openingHours,
@@ -182,7 +182,7 @@ function toPlace(result: GooglePlaceResult): Place | null {
     name: result.name,
     category,
     address: result.vicinity ?? result.formatted_address ?? "Address unavailable",
-    distanceText: formatDistance(calculateDistanceMeters(PARIS_CENTER.latitude, PARIS_CENTER.longitude, latitude, longitude)),
+    distanceText: formatDistance(calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, latitude, longitude)),
     latitude,
     longitude,
     acStatus: "UNVERIFIED",

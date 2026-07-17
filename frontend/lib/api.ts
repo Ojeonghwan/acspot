@@ -1,4 +1,4 @@
-import { calculateDistanceMeters, formatDistance, formatRelativeTime, latitudeToY, longitudeToX, PARIS_CENTER } from "./geo";
+import { calculateDistanceMeters, DEFAULT_CENTER, formatDistance, formatRelativeTime, latitudeToY, longitudeToX } from "./geo";
 import type { AcStatus, CoolingLevel, Place, PlaceCategory, ReportChoice } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -71,7 +71,7 @@ type AcReportResponse = {
   lastReportedAt: string | null;
 };
 
-export async function fetchNearbyPlaces(latitude = PARIS_CENTER.latitude, longitude = PARIS_CENTER.longitude, radius = 3000): Promise<Place[]> {
+export async function fetchNearbyPlaces(latitude = DEFAULT_CENTER.latitude, longitude = DEFAULT_CENTER.longitude, radius = 3000): Promise<Place[]> {
   const params = new URLSearchParams({
     lat: String(latitude),
     lng: String(longitude),
@@ -88,7 +88,7 @@ export async function searchPlaces(keyword: string): Promise<Place[]> {
     toPlace(
       {
         ...place,
-        distanceMeters: calculateDistanceMeters(PARIS_CENTER.latitude, PARIS_CENTER.longitude, place.latitude, place.longitude),
+        distanceMeters: calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, place.latitude, place.longitude),
         acStatus: place.acStatus,
         trustScore: place.trustScore,
         totalReportCount: place.totalReportCount,
@@ -113,7 +113,7 @@ export async function fetchPlaceDetail(placeId: number, anonymousId: string): Pr
       latitude: detail.latitude,
       longitude: detail.longitude,
       osmId: detail.osmId,
-      distanceMeters: calculateDistanceMeters(PARIS_CENTER.latitude, PARIS_CENTER.longitude, detail.latitude, detail.longitude),
+      distanceMeters: calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, detail.latitude, detail.longitude),
       acStatus: detail.acSummary.currentAcStatus,
       trustScore: detail.acSummary.trustScore,
       totalReportCount: detail.acSummary.totalReportCount,

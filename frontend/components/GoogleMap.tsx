@@ -2,7 +2,7 @@
 
 import { LocateFixed } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { PARIS_CENTER } from "@/lib/geo";
+import { DEFAULT_CENTER } from "@/lib/geo";
 import { fetchGooglePlaceDetails, fetchGooglePlacesInBounds, hasGoogleMapsKey, loadGoogleMaps, type GoogleBounds } from "@/lib/googleMaps";
 import type { MapCamera, Place } from "@/lib/types";
 
@@ -64,7 +64,7 @@ export function GoogleMap({
         }
 
         const map = new google.maps.Map(containerRef.current, {
-          center: initialCamera ? { lat: initialCamera.latitude, lng: initialCamera.longitude } : { lat: PARIS_CENTER.latitude, lng: PARIS_CENTER.longitude },
+          center: initialCamera ? { lat: initialCamera.latitude, lng: initialCamera.longitude } : { lat: DEFAULT_CENTER.latitude, lng: DEFAULT_CENTER.longitude },
           zoom: initialCamera?.zoom ?? 14,
           minZoom: 12,
           maxZoom: 19,
