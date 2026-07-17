@@ -39,7 +39,10 @@ export function ACSpotApp() {
     const normalized = query.trim();
 
     async function loadPrimaryPlaces() {
-      setLoading(true);
+      const isInitialLoad = registeredPlaces.length === 0 && poiPlaces.length === 0;
+      if (normalized || isInitialLoad) {
+        setLoading(true);
+      }
       setError("");
       try {
         if (normalized) {
@@ -52,9 +55,10 @@ export function ACSpotApp() {
           return;
         }
 
-        const nextRegisteredPlaces = await fetchNearbyPlaces();
+        const nextRegisteredPlaces = await fetchNearbyPlaces(mapCamera?.latitude, mapCamera?.longitude);
         if (!controller.signal.aborted) {
           setRegisteredPlaces(nextRegisteredPlaces);
+          setPoiPlaces((current) => removeRegisteredPoiDuplicates(nextRegisteredPlaces, current));
           setLoading(false);
         }
       } catch (apiError) {
@@ -72,7 +76,7 @@ export function ACSpotApp() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [query]);
+  }, [query, mapCamera]);
 
   const handlePoiPlacesChange = useCallback(
     (places: Place[]) => {
@@ -168,7 +172,7 @@ export function ACSpotApp() {
         return;
       }
 
-      const nextRegisteredPlaces = await fetchNearbyPlaces();
+      const nextRegisteredPlaces = await fetchNearbyPlaces(mapCamera?.latitude, mapCamera?.longitude);
       setRegisteredPlaces(nextRegisteredPlaces);
       setPoiPlaces((current) => removeRegisteredPoiDuplicates(nextRegisteredPlaces, current));
     } catch {
@@ -250,9 +254,13 @@ function filterByCategory(places: Place[], category: CategoryFilter): Place[] {
 
 function removeRegisteredPoiDuplicates(registeredPlaces: Place[], poiPlaces: Place[]): Place[] {
   const registeredOsmIds = new Set(registeredPlaces.map((place) => place.osmId).filter(Boolean));
+  const registeredGooglePlaceIds = new Set(registeredPlaces.map((place) => place.googlePlaceId).filter(Boolean));
   const registeredNames = new Set(registeredPlaces.map((place) => normalizeName(place.name)));
   return poiPlaces.filter((place) => {
     if (place.osmId && registeredOsmIds.has(place.osmId)) {
+      return false;
+    }
+    if (place.googlePlaceId && registeredGooglePlaceIds.has(place.googlePlaceId)) {
       return false;
     }
     return !registeredNames.has(normalizeName(place.name));
