@@ -255,7 +255,7 @@ function filterByCategory(places: Place[], category: CategoryFilter): Place[] {
 function removeRegisteredPoiDuplicates(registeredPlaces: Place[], poiPlaces: Place[]): Place[] {
   const registeredOsmIds = new Set(registeredPlaces.map((place) => place.osmId).filter(Boolean));
   const registeredGooglePlaceIds = new Set(registeredPlaces.map((place) => place.googlePlaceId).filter(Boolean));
-  const registeredNames = new Set(registeredPlaces.map((place) => normalizeName(place.name)));
+  const registeredNames = new Set(registeredPlaces.map((place) => normalizeName(place.name)).filter(Boolean));
   return poiPlaces.filter((place) => {
     if (place.osmId && registeredOsmIds.has(place.osmId)) {
       return false;
@@ -263,12 +263,13 @@ function removeRegisteredPoiDuplicates(registeredPlaces: Place[], poiPlaces: Pla
     if (place.googlePlaceId && registeredGooglePlaceIds.has(place.googlePlaceId)) {
       return false;
     }
-    return !registeredNames.has(normalizeName(place.name));
+    const normalizedName = normalizeName(place.name);
+    return !normalizedName || !registeredNames.has(normalizedName);
   });
 }
 
 function normalizeName(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  return value.trim().toLowerCase().replace(/\s+/g, "");
 }
 
 function matchesPlace(a: Place, b: Place): boolean {
