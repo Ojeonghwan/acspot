@@ -126,6 +126,46 @@ export function fetchGooglePlacesInBounds(map: any, bounds: GoogleBounds, limit 
   });
 }
 
+export async function searchGooglePlacesByText(
+  keyword: string,
+  center = DEFAULT_CENTER,
+  limit = 20
+): Promise<Place[]> {
+  const normalized = keyword.trim();
+  if (!normalized || !hasGoogleMapsKey()) {
+    return [];
+  }
+
+  try {
+    const google = await loadGoogleMaps();
+    if (!google?.maps?.places?.PlacesService) {
+      return [];
+    }
+
+    return new Promise((resolve) => {
+      const service = new google.maps.places.PlacesService(document.createElement("div"));
+      service.textSearch(
+        {
+          query: normalized,
+          location: new google.maps.LatLng(center.latitude, center.longitude),
+          radius: 10000,
+          type: "establishment"
+        },
+        (results: GooglePlaceResult[] | null, status: string) => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
+            resolve([]);
+            return;
+          }
+
+          resolve(results.slice(0, limit).map(toPlace).filter(Boolean) as Place[]);
+        }
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
 export function fetchGooglePlaceDetails(map: any, place: Place): Promise<Place> {
   return new Promise((resolve) => {
     const google = (window as GoogleMapsWindow).google;

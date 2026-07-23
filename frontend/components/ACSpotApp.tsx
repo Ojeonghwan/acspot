@@ -10,7 +10,7 @@ import { SearchBar } from "./SearchBar";
 import { ViewToggle } from "./ViewToggle";
 import { fetchNearbyPlaces, fetchPlaceDetail, registerExternalPlace, saveAcReport, searchPlaces } from "@/lib/api";
 import { getAnonymousId } from "@/lib/anonymousId";
-import { GOOGLE_PLACES_BOUNDS, type GoogleBounds } from "@/lib/googleMaps";
+import { GOOGLE_PLACES_BOUNDS, searchGooglePlacesByText, type GoogleBounds } from "@/lib/googleMaps";
 import type { CategoryFilter, MapCamera, Place, ReportChoice, ViewMode } from "@/lib/types";
 
 export function ACSpotApp() {
@@ -46,10 +46,14 @@ export function ACSpotApp() {
       setError("");
       try {
         if (normalized) {
-          const registeredResults = await searchPlaces(normalized);
+          const searchCenter = mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined;
+          const [registeredResults, googleResults] = await Promise.all([
+            searchPlaces(normalized),
+            searchGooglePlacesByText(normalized, searchCenter)
+          ]);
           if (!controller.signal.aborted) {
             setRegisteredPlaces(registeredResults);
-            setPoiPlaces([]);
+            setPoiPlaces(removeRegisteredPoiDuplicates(registeredResults, googleResults));
             setLoading(false);
           }
           return;
@@ -91,7 +95,8 @@ export function ACSpotApp() {
   const filteredRegisteredPlaces = useMemo(() => filterByCategory(registeredPlaces, category), [category, registeredPlaces]);
   const filteredPoiPlaces = useMemo(() => filterByCategory(poiPlaces, category), [category, poiPlaces]);
   const filteredMapPlaces = useMemo(() => [...filteredRegisteredPlaces, ...filteredPoiPlaces], [filteredRegisteredPlaces, filteredPoiPlaces]);
-  const listPlaces = query.trim() ? filteredMapPlaces : filteredRegisteredPlaces;
+  const searchPlacesToShow = useMemo(() => [...registeredPlaces, ...poiPlaces], [registeredPlaces, poiPlaces]);
+  const listPlaces = query.trim() ? searchPlacesToShow : filteredRegisteredPlaces;
 
   async function selectPlace(place: Place) {
     setSelectedPlace(place);
@@ -166,9 +171,13 @@ export function ACSpotApp() {
     try {
       const normalized = query.trim();
       if (normalized) {
-        const registeredResults = await searchPlaces(normalized);
+        const searchCenter = mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined;
+        const [registeredResults, googleResults] = await Promise.all([
+          searchPlaces(normalized),
+          searchGooglePlacesByText(normalized, searchCenter)
+        ]);
         setRegisteredPlaces(registeredResults);
-        setPoiPlaces([]);
+        setPoiPlaces(removeRegisteredPoiDuplicates(registeredResults, googleResults));
         return;
       }
 
