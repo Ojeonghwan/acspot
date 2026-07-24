@@ -34,6 +34,8 @@ export type Place = {
   googlePlaceId?: string | null;
   googleMapsUrl?: string | null;
   osmId?: string | null;
+  countryCode?: string | null;
+  city?: string | null;
   sourceLabel?: string | null;
   openingHours?: string | null;
   phone?: string | null;

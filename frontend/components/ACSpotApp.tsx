@@ -10,7 +10,7 @@ import { SearchBar } from "./SearchBar";
 import { ViewToggle } from "./ViewToggle";
 import { fetchNearbyPlaces, fetchPlaceDetail, registerExternalPlace, saveAcReport, searchPlaces } from "@/lib/api";
 import { getAnonymousId } from "@/lib/anonymousId";
-import { GOOGLE_PLACES_BOUNDS, searchGooglePlacesByText, type GoogleBounds } from "@/lib/googleMaps";
+import { fetchGooglePlaceDetailsById, GOOGLE_PLACES_BOUNDS, searchGooglePlacesByText, type GoogleBounds } from "@/lib/googleMaps";
 import type { CategoryFilter, MapCamera, Place, ReportChoice, ViewMode } from "@/lib/types";
 
 export function ACSpotApp() {
@@ -103,6 +103,14 @@ export function ACSpotApp() {
     setReportChoice(place.acStatus === "UNAVAILABLE" ? "UNAVAILABLE" : place.acStatus === "AVAILABLE" ? "AVAILABLE" : null);
 
     if (!place.isRegistered) {
+      if (place.googlePlaceId) {
+        try {
+          const detail = await fetchGooglePlaceDetailsById(place);
+          setSelectedPlace(detail);
+        } catch {
+          // Keep the initial Google result if details are unavailable.
+        }
+      }
       return;
     }
 

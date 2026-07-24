@@ -20,6 +20,7 @@ type GooglePlaceResult = {
   name?: string;
   vicinity?: string;
   formatted_address?: string;
+  address_components?: GoogleAddressComponent[];
   types?: string[];
   geometry?: {
     location?: GoogleLatLng;
@@ -32,6 +33,12 @@ type GooglePlaceResult = {
   url?: string;
 };
 
+type GoogleAddressComponent = {
+  long_name: string;
+  short_name: string;
+  types: string[];
+};
+
 type GoogleMapsWindow = Window & {
   google?: any;
   __acspotGoogleMapsPromise?: Promise<any>;
@@ -39,6 +46,18 @@ type GoogleMapsWindow = Window & {
 
 const GOOGLE_MAPS_SCRIPT_ID = "acspot-google-maps";
 const GOOGLE_MAPS_LIBRARIES = "places,marker";
+const GOOGLE_PLACE_DETAIL_FIELDS = [
+  "place_id",
+  "name",
+  "formatted_address",
+  "address_components",
+  "types",
+  "geometry",
+  "opening_hours",
+  "formatted_phone_number",
+  "website",
+  "url"
+];
 
 export const GOOGLE_PLACES_BOUNDS: GoogleBounds = {
   south: 48.83,
@@ -178,7 +197,7 @@ export function fetchGooglePlaceDetails(map: any, place: Place): Promise<Place> 
     service.getDetails(
       {
         placeId: place.googlePlaceId,
-        fields: ["place_id", "name", "formatted_address", "types", "geometry", "opening_hours", "formatted_phone_number", "website", "url"]
+        fields: GOOGLE_PLACE_DETAIL_FIELDS
       },
       (result: GooglePlaceResult | null, status: string) => {
         if (status !== google.maps.places.PlacesServiceStatus.OK || !result) {
@@ -188,6 +207,7 @@ export function fetchGooglePlaceDetails(map: any, place: Place): Promise<Place> 
 
         const latitude = result.geometry?.location?.lat() ?? place.latitude;
         const longitude = result.geometry?.location?.lng() ?? place.longitude;
+        const addressParts = extractAddressParts(result.address_components);
 
         resolve({
           ...place,
@@ -200,11 +220,64 @@ export function fetchGooglePlaceDetails(map: any, place: Place): Promise<Place> 
           openingHours: result.opening_hours?.isOpen ? (result.opening_hours.isOpen() ? "Open now" : "Closed now") : place.openingHours,
           phone: result.formatted_phone_number ?? place.phone,
           website: result.website ?? place.website,
-          googleMapsUrl: result.url ?? place.googleMapsUrl
+          googleMapsUrl: result.url ?? place.googleMapsUrl,
+          countryCode: addressParts.countryCode ?? place.countryCode,
+          city: addressParts.city ?? place.city
         });
       }
     );
   });
+}
+
+export async function fetchGooglePlaceDetailsById(place: Place): Promise<Place> {
+  if (!place.googlePlaceId) {
+    return place;
+  }
+
+  try {
+    const google = await loadGoogleMaps();
+    if (!google?.maps?.places?.PlacesService) {
+      return place;
+    }
+
+    return new Promise((resolve) => {
+      const service = new google.maps.places.PlacesService(document.createElement("div"));
+      service.getDetails(
+        {
+          placeId: place.googlePlaceId,
+          fields: GOOGLE_PLACE_DETAIL_FIELDS
+        },
+        (result: GooglePlaceResult | null, status: string) => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !result) {
+            resolve(place);
+            return;
+          }
+
+          const latitude = result.geometry?.location?.lat() ?? place.latitude;
+          const longitude = result.geometry?.location?.lng() ?? place.longitude;
+          const addressParts = extractAddressParts(result.address_components);
+
+          resolve({
+            ...place,
+            name: result.name ?? place.name,
+            category: result.types ? toCategory(result.types) : place.category,
+            address: result.formatted_address ?? place.address,
+            distanceText: formatDistance(calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, latitude, longitude)),
+            latitude,
+            longitude,
+            openingHours: result.opening_hours?.isOpen ? (result.opening_hours.isOpen() ? "Open now" : "Closed now") : place.openingHours,
+            phone: result.formatted_phone_number ?? place.phone,
+            website: result.website ?? place.website,
+            googleMapsUrl: result.url ?? place.googleMapsUrl,
+            countryCode: addressParts.countryCode ?? place.countryCode,
+            city: addressParts.city ?? place.city
+          });
+        }
+      );
+    });
+  } catch {
+    return place;
+  }
 }
 
 function toPlace(result: GooglePlaceResult): Place | null {
@@ -216,6 +289,7 @@ function toPlace(result: GooglePlaceResult): Place | null {
   const latitude = location.lat();
   const longitude = location.lng();
   const category = toCategory(result.types ?? []);
+  const addressParts = extractAddressParts(result.address_components);
 
   return {
     placeId: -Math.abs(hashString(result.place_id)),
@@ -234,7 +308,28 @@ function toPlace(result: GooglePlaceResult): Place | null {
     isRegistered: false,
     googlePlaceId: result.place_id,
     googleMapsUrl: result.url,
+    countryCode: addressParts.countryCode,
+    city: addressParts.city,
     sourceLabel: "Google Places"
+  };
+}
+
+function extractAddressParts(components?: GoogleAddressComponent[]): { countryCode: string | null; city: string | null } {
+  if (!components?.length) {
+    return { countryCode: null, city: null };
+  }
+
+  const country = components.find((item) => item.types.includes("country"));
+  const city =
+    components.find((item) => item.types.includes("locality")) ??
+    components.find((item) => item.types.includes("postal_town")) ??
+    components.find((item) => item.types.includes("administrative_area_level_3")) ??
+    components.find((item) => item.types.includes("administrative_area_level_2")) ??
+    components.find((item) => item.types.includes("administrative_area_level_1"));
+
+  return {
+    countryCode: country?.short_name ?? null,
+    city: city?.long_name ?? null
   };
 }
 
