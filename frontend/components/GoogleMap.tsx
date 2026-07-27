@@ -350,17 +350,12 @@ function createAcMarkerIcon(google: any, selected: boolean) {
   const height = selected ? 68 : 56;
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56">
-      <path d="M24 55C19.3 48.8 7 39.7 7 24C7 14.6 14.6 7 24 7s17 7.6 17 17c0 15.7-12.3 24.8-17 31Z" fill="#0797c9" stroke="#ffffff" stroke-width="3"/>
-      <g fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M24 15v20"/>
-        <path d="M15.3 20l17.4 10"/>
-        <path d="M32.7 20l-17.4 10"/>
-        <path d="m20 17 4 4 4-4"/>
-        <path d="m20 33 4-4 4 4"/>
-        <path d="m15.8 24.3 5.4-1.5-1.5-5.4"/>
-        <path d="m32.2 25.7-5.4 1.5 1.5 5.4"/>
-        <path d="m32.2 24.3-5.4-1.5 1.5-5.4"/>
-        <path d="m15.8 25.7 5.4 1.5-1.5 5.4"/>
+      <path d="M24 55 10.8 41.8C3.6 34.6 2 29 2 22.8 2 10.2 11.8 1.5 24 1.5s22 8.7 22 21.3c0 6.2-1.6 11.8-8.8 19L24 55Z" fill="#0797c9"/>
+      <g fill="none" stroke="#ffffff" stroke-width="4.2" stroke-linecap="round">
+        <path d="M24 11v26"/>
+        <path d="M11 24h26"/>
+        <path d="M14.8 14.8 33.2 33.2"/>
+        <path d="M33.2 14.8 14.8 33.2"/>
       </g>
     </svg>
   `;
