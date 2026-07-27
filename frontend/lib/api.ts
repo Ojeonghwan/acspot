@@ -3,6 +3,11 @@ import type { AcStatus, CoolingLevel, Place, PlaceCategory, ReportChoice } from 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
+type DistanceCenter = {
+  latitude: number;
+  longitude: number;
+};
+
 type NearbyPlaceItem = {
   placeId: number;
   name: string;
@@ -91,14 +96,14 @@ export async function fetchNearbyPlaces(latitude = DEFAULT_CENTER.latitude, long
   return data.places.map((place) => toPlace(place));
 }
 
-export async function searchPlaces(keyword: string): Promise<Place[]> {
+export async function searchPlaces(keyword: string, distanceCenter: DistanceCenter = DEFAULT_CENTER): Promise<Place[]> {
   const params = new URLSearchParams({ keyword });
   const data = await request<PlaceSearchResponse>(`/api/places/search?${params.toString()}`);
   return data.places.map((place) =>
     toPlace(
       {
         ...place,
-        distanceMeters: calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, place.latitude, place.longitude),
+        distanceMeters: calculateDistanceMeters(distanceCenter.latitude, distanceCenter.longitude, place.latitude, place.longitude),
         acStatus: place.acStatus,
         trustScore: place.trustScore,
         totalReportCount: place.totalReportCount,
@@ -111,7 +116,7 @@ export async function searchPlaces(keyword: string): Promise<Place[]> {
   );
 }
 
-export async function fetchPlaceDetail(placeId: number, anonymousId: string): Promise<Place> {
+export async function fetchPlaceDetail(placeId: number, anonymousId: string, distanceCenter: DistanceCenter = DEFAULT_CENTER): Promise<Place> {
   const params = anonymousId ? `?${new URLSearchParams({ anonymousId }).toString()}` : "";
   const detail = await request<PlaceDetailResponse>(`/api/places/${placeId}${params}`);
   return toPlace(
@@ -123,7 +128,7 @@ export async function fetchPlaceDetail(placeId: number, anonymousId: string): Pr
       latitude: detail.latitude,
       longitude: detail.longitude,
       osmId: detail.osmId,
-      distanceMeters: calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, detail.latitude, detail.longitude),
+      distanceMeters: calculateDistanceMeters(distanceCenter.latitude, distanceCenter.longitude, detail.latitude, detail.longitude),
       acStatus: detail.acSummary.currentAcStatus,
       trustScore: detail.acSummary.trustScore,
       totalReportCount: detail.acSummary.totalReportCount,

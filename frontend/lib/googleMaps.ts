@@ -44,6 +44,11 @@ type GoogleMapsWindow = Window & {
   __acspotGoogleMapsPromise?: Promise<any>;
 };
 
+type DistanceCenter = {
+  latitude: number;
+  longitude: number;
+};
+
 const GOOGLE_MAPS_SCRIPT_ID = "acspot-google-maps";
 const GOOGLE_MAPS_LIBRARIES = "places,marker";
 const GOOGLE_PLACE_DETAIL_FIELDS = [
@@ -140,7 +145,7 @@ export function fetchGooglePlacesInBounds(map: any, bounds: GoogleBounds, limit 
         return;
       }
 
-      resolve(results.slice(0, limit).map(toPlace).filter(Boolean) as Place[]);
+      resolve(results.slice(0, limit).map((result) => toPlace(result)).filter(Boolean) as Place[]);
     });
   });
 }
@@ -176,7 +181,7 @@ export async function searchGooglePlacesByText(
             return;
           }
 
-          resolve(results.slice(0, limit).map(toPlace).filter(Boolean) as Place[]);
+          resolve(results.slice(0, limit).map((result) => toPlace(result, center)).filter(Boolean) as Place[]);
         }
       );
     });
@@ -185,7 +190,7 @@ export async function searchGooglePlacesByText(
   }
 }
 
-export function fetchGooglePlaceDetails(map: any, place: Place): Promise<Place> {
+export function fetchGooglePlaceDetails(map: any, place: Place, distanceCenter: DistanceCenter = DEFAULT_CENTER): Promise<Place> {
   return new Promise((resolve) => {
     const google = (window as GoogleMapsWindow).google;
     if (!google?.maps?.places?.PlacesService || !place.googlePlaceId) {
@@ -214,7 +219,7 @@ export function fetchGooglePlaceDetails(map: any, place: Place): Promise<Place> 
           name: result.name ?? place.name,
           category: result.types ? toCategory(result.types) : place.category,
           address: result.formatted_address ?? place.address,
-          distanceText: formatDistance(calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, latitude, longitude)),
+          distanceText: formatDistance(calculateDistanceMeters(distanceCenter.latitude, distanceCenter.longitude, latitude, longitude)),
           latitude,
           longitude,
           openingHours: result.opening_hours?.isOpen ? (result.opening_hours.isOpen() ? "Open now" : "Closed now") : place.openingHours,
@@ -229,7 +234,7 @@ export function fetchGooglePlaceDetails(map: any, place: Place): Promise<Place> 
   });
 }
 
-export async function fetchGooglePlaceDetailsById(place: Place): Promise<Place> {
+export async function fetchGooglePlaceDetailsById(place: Place, distanceCenter: DistanceCenter = DEFAULT_CENTER): Promise<Place> {
   if (!place.googlePlaceId) {
     return place;
   }
@@ -262,7 +267,7 @@ export async function fetchGooglePlaceDetailsById(place: Place): Promise<Place> 
             name: result.name ?? place.name,
             category: result.types ? toCategory(result.types) : place.category,
             address: result.formatted_address ?? place.address,
-            distanceText: formatDistance(calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, latitude, longitude)),
+            distanceText: formatDistance(calculateDistanceMeters(distanceCenter.latitude, distanceCenter.longitude, latitude, longitude)),
             latitude,
             longitude,
             openingHours: result.opening_hours?.isOpen ? (result.opening_hours.isOpen() ? "Open now" : "Closed now") : place.openingHours,
@@ -280,7 +285,7 @@ export async function fetchGooglePlaceDetailsById(place: Place): Promise<Place> 
   }
 }
 
-function toPlace(result: GooglePlaceResult): Place | null {
+function toPlace(result: GooglePlaceResult, distanceCenter: DistanceCenter = DEFAULT_CENTER): Place | null {
   const location = result.geometry?.location;
   if (!result.place_id || !result.name || !location) {
     return null;
@@ -296,7 +301,7 @@ function toPlace(result: GooglePlaceResult): Place | null {
     name: result.name,
     category,
     address: result.vicinity ?? result.formatted_address ?? "Address unavailable",
-    distanceText: formatDistance(calculateDistanceMeters(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude, latitude, longitude)),
+    distanceText: formatDistance(calculateDistanceMeters(distanceCenter.latitude, distanceCenter.longitude, latitude, longitude)),
     latitude,
     longitude,
     acStatus: "UNVERIFIED",

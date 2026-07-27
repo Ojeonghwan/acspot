@@ -21,6 +21,7 @@ export function ACSpotApp() {
   const [poiPlaces, setPoiPlaces] = useState<Place[]>([]);
   const [, setMapBounds] = useState<GoogleBounds>(GOOGLE_PLACES_BOUNDS);
   const [mapCamera, setMapCamera] = useState<MapCamera | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [initialLocationAttempted, setInitialLocationAttempted] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [reportChoice, setReportChoice] = useState<ReportChoice | null>(null);
@@ -60,9 +61,9 @@ export function ACSpotApp() {
       setError("");
       try {
         if (normalized) {
-          const searchCenter = mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined;
+          const searchCenter = userLocation ?? (mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined);
           const [registeredResults, googleResults] = await Promise.all([
-            searchPlaces(normalized),
+            searchPlaces(normalized, searchCenter),
             searchGooglePlacesByText(normalized, searchCenter)
           ]);
           if (!controller.signal.aborted) {
@@ -96,7 +97,7 @@ export function ACSpotApp() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [query, mapCamera]);
+  }, [query, mapCamera, userLocation]);
 
   const handlePoiPlacesChange = useCallback(
     (places: Place[]) => {
@@ -109,10 +110,10 @@ export function ACSpotApp() {
   );
 
   const filteredRegisteredPlaces = useMemo(() => filterByCategory(registeredPlaces, category), [category, registeredPlaces]);
-  const filteredPoiPlaces = useMemo(() => filterByCategory(poiPlaces, category), [category, poiPlaces]);
-  const filteredMapPlaces = useMemo(() => [...filteredRegisteredPlaces, ...filteredPoiPlaces], [filteredRegisteredPlaces, filteredPoiPlaces]);
+  const visibleMapPlaces = useMemo(() => filteredRegisteredPlaces.filter((place) => place.acStatus === "AVAILABLE"), [filteredRegisteredPlaces]);
   const searchPlacesToShow = useMemo(() => [...registeredPlaces, ...poiPlaces], [registeredPlaces, poiPlaces]);
   const listPlaces = query.trim() ? searchPlacesToShow : filteredRegisteredPlaces;
+  const distanceCenter = userLocation ?? (mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : null);
 
   async function selectPlace(place: Place) {
     setSelectedPlace(place);
@@ -121,7 +122,7 @@ export function ACSpotApp() {
     if (!place.isRegistered) {
       if (place.googlePlaceId) {
         try {
-          const detail = await fetchGooglePlaceDetailsById(place);
+          const detail = await fetchGooglePlaceDetailsById(place, distanceCenter ?? undefined);
           setSelectedPlace(detail);
         } catch {
           // Keep the initial Google result if details are unavailable.
@@ -135,7 +136,7 @@ export function ACSpotApp() {
         return;
       }
 
-      const detail = await fetchPlaceDetail(place.placeId, anonymousId);
+      const detail = await fetchPlaceDetail(place.placeId, anonymousId, distanceCenter ?? undefined);
       setSelectedPlace(detail);
       setReportChoice(detail.acStatus === "UNAVAILABLE" ? "UNAVAILABLE" : detail.acStatus === "AVAILABLE" ? "AVAILABLE" : null);
     } catch (apiError) {
@@ -206,9 +207,9 @@ export function ACSpotApp() {
     try {
       const normalized = query.trim();
       if (normalized) {
-        const searchCenter = mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined;
+        const searchCenter = userLocation ?? (mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined);
         const [registeredResults, googleResults] = await Promise.all([
-          searchPlaces(normalized),
+          searchPlaces(normalized, searchCenter),
           searchGooglePlacesByText(normalized, searchCenter)
         ]);
         setRegisteredPlaces(registeredResults);
@@ -250,14 +251,16 @@ export function ACSpotApp() {
 
         {!showingSearch && viewMode === "map" ? (
           <MapView
-            registeredPlaces={filteredRegisteredPlaces}
-            poiPlaces={filteredPoiPlaces}
+            registeredPlaces={visibleMapPlaces}
+            poiPlaces={[]}
             selectedPlace={selectedPlace}
             initialCamera={mapCamera}
+            distanceCenter={distanceCenter}
             shouldUseInitialGeolocation={!mapCamera && !initialLocationAttempted}
             onSelect={selectPlace}
             onBoundsChange={setMapBounds}
             onCameraChange={setMapCamera}
+            onUserLocationChange={setUserLocation}
             onInitialGeolocationAttempt={() => setInitialLocationAttempted(true)}
             onPoiPlacesChange={handlePoiPlacesChange}
           />

@@ -11,10 +11,12 @@ type GoogleMapProps = {
   poiPlaces: Place[];
   selectedPlace: Place | null;
   initialCamera?: MapCamera | null;
+  distanceCenter?: { latitude: number; longitude: number } | null;
   shouldUseInitialGeolocation?: boolean;
   onSelect: (place: Place) => void;
   onBoundsChange?: (bounds: GoogleBounds) => void;
   onCameraChange?: (camera: MapCamera) => void;
+  onUserLocationChange?: (location: { latitude: number; longitude: number }) => void;
   onInitialGeolocationAttempt?: () => void;
   onPoiPlacesChange?: (places: Place[]) => void;
 };
@@ -31,10 +33,12 @@ export function GoogleMap({
   poiPlaces,
   selectedPlace,
   initialCamera,
+  distanceCenter,
   shouldUseInitialGeolocation,
   onSelect,
   onBoundsChange,
   onCameraChange,
+  onUserLocationChange,
   onInitialGeolocationAttempt,
   onPoiPlacesChange
 }: GoogleMapProps) {
@@ -131,7 +135,7 @@ export function GoogleMap({
       const marker = createPlaceMarker(google, map, place, Boolean(selectedPlace && isSamePlace(selectedPlace, place)));
 
       marker.addListener("click", async () => {
-        const nextPlace = place.isRegistered ? place : await fetchGooglePlaceDetails(map, place);
+        const nextPlace = place.isRegistered ? place : await fetchGooglePlaceDetails(map, place, distanceCenter ?? DEFAULT_CENTER);
         onSelect(nextPlace);
       });
 
@@ -154,6 +158,7 @@ export function GoogleMap({
       return;
     }
 
+    const camera = getMapCamera(map);
     const place = await fetchGooglePlaceDetails(map, {
       placeId: -Math.abs(hashString(placeId)),
       name: "Selected place",
@@ -171,7 +176,7 @@ export function GoogleMap({
       isRegistered: false,
       googlePlaceId: placeId,
       sourceLabel: "Google Places"
-    });
+    }, distanceCenter ?? camera ?? DEFAULT_CENTER);
     onSelect(place);
   }
 
@@ -219,7 +224,9 @@ export function GoogleMap({
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        map.setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
+        const currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
+        onUserLocationChange?.({ latitude: currentPosition.lat, longitude: currentPosition.lng });
+        map.setCenter(currentPosition);
         map.setZoom(WALKING_ZOOM);
         emitVisiblePlaces();
       },
@@ -254,6 +261,7 @@ export function GoogleMap({
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
+        onUserLocationChange?.({ latitude: currentPosition.lat, longitude: currentPosition.lng });
         map.setCenter(currentPosition);
         map.setZoom(WALKING_ZOOM);
         setLocating(false);

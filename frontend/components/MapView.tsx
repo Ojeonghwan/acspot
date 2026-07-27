@@ -10,10 +10,12 @@ type MapViewProps = {
   poiPlaces: Place[];
   selectedPlace: Place | null;
   initialCamera?: MapCamera | null;
+  distanceCenter?: { latitude: number; longitude: number } | null;
   shouldUseInitialGeolocation?: boolean;
   onSelect: (place: Place) => void;
   onBoundsChange?: (bounds: GoogleBounds) => void;
   onCameraChange?: (camera: MapCamera) => void;
+  onUserLocationChange?: (location: { latitude: number; longitude: number }) => void;
   onInitialGeolocationAttempt?: () => void;
   onPoiPlacesChange?: (places: Place[]) => void;
 };
@@ -23,10 +25,12 @@ export function MapView({
   poiPlaces,
   selectedPlace,
   initialCamera,
+  distanceCenter,
   shouldUseInitialGeolocation,
   onSelect,
   onBoundsChange,
   onCameraChange,
+  onUserLocationChange,
   onInitialGeolocationAttempt,
   onPoiPlacesChange
 }: MapViewProps) {
@@ -36,10 +40,12 @@ export function MapView({
       poiPlaces={poiPlaces}
       selectedPlace={selectedPlace}
       initialCamera={initialCamera}
+      distanceCenter={distanceCenter}
       shouldUseInitialGeolocation={shouldUseInitialGeolocation}
       onSelect={onSelect}
       onBoundsChange={onBoundsChange}
       onCameraChange={onCameraChange}
+      onUserLocationChange={onUserLocationChange}
       onInitialGeolocationAttempt={onInitialGeolocationAttempt}
       onPoiPlacesChange={onPoiPlacesChange}
     />
