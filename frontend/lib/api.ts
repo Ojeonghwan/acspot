@@ -71,6 +71,16 @@ type AcReportResponse = {
   lastReportedAt: string | null;
 };
 
+type AnalyticsEventPayload = {
+  eventName: string;
+  path?: string;
+  placeId?: number;
+  googlePlaceId?: string | null;
+  category?: PlaceCategory;
+  acStatus?: ReportChoice;
+  metadata?: Record<string, unknown>;
+};
+
 export async function fetchNearbyPlaces(latitude = DEFAULT_CENTER.latitude, longitude = DEFAULT_CENTER.longitude, radius = 3000): Promise<Place[]> {
   const params = new URLSearchParams({
     lat: String(latitude),
@@ -154,6 +164,32 @@ export async function saveAcReport(placeId: number, anonymousId: string, acStatu
   });
 }
 
+export async function recordVisit(anonymousId: string): Promise<void> {
+  if (typeof window === "undefined" || !anonymousId) {
+    return;
+  }
+
+  await postAnalytics("/api/analytics/visits", {
+    anonymousId,
+    path: `${window.location.pathname}${window.location.search}`,
+    language: window.navigator.language,
+    deviceType: getDeviceType(),
+    referrer: document.referrer || null
+  });
+}
+
+export async function recordAnalyticsEvent(anonymousId: string, payload: AnalyticsEventPayload): Promise<void> {
+  if (typeof window === "undefined" || !anonymousId) {
+    return;
+  }
+
+  await postAnalytics("/api/analytics/events", {
+    anonymousId,
+    path: payload.path ?? `${window.location.pathname}${window.location.search}`,
+    ...payload
+  });
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
@@ -177,11 +213,42 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function postAnalytics(path: string, body: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(`${getApiBaseUrl()}${path}`, {
+      method: "POST",
+      keepalive: true,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+  } catch {
+    // Analytics should never block the user's core flow.
+  }
+}
+
 function getApiBaseUrl(): string {
   if (typeof window !== "undefined" && window.location.protocol === "https:" && API_BASE_URL.startsWith("http://")) {
     return "";
   }
   return API_BASE_URL;
+}
+
+function getDeviceType(): "mobile" | "tablet" | "desktop" {
+  if (typeof window === "undefined") {
+    return "desktop";
+  }
+
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  if (/ipad|tablet/.test(userAgent)) {
+    return "tablet";
+  }
+  if (/mobi|android|iphone|ipod/.test(userAgent)) {
+    return "mobile";
+  }
+  return "desktop";
 }
 
 function toPlace(item: NearbyPlaceItem, googlePlaceId?: string | null, googleMapsUrl?: string | null, osmId?: string | null): Place {

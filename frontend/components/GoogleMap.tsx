@@ -24,6 +24,8 @@ type MarkerRecord = {
   place: Place;
 };
 
+const WALKING_ZOOM = 18;
+
 export function GoogleMap({
   registeredPlaces,
   poiPlaces,
@@ -65,7 +67,7 @@ export function GoogleMap({
 
         const map = new google.maps.Map(containerRef.current, {
           center: initialCamera ? { lat: initialCamera.latitude, lng: initialCamera.longitude } : { lat: DEFAULT_CENTER.latitude, lng: DEFAULT_CENTER.longitude },
-          zoom: initialCamera?.zoom ?? 14,
+          zoom: initialCamera?.zoom ?? WALKING_ZOOM,
           minZoom: 12,
           maxZoom: 19,
           clickableIcons: true,
@@ -218,7 +220,7 @@ export function GoogleMap({
     navigator.geolocation.getCurrentPosition(
       (position) => {
         map.setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
-        map.setZoom(15);
+        map.setZoom(WALKING_ZOOM);
         emitVisiblePlaces();
       },
       () => {
@@ -253,7 +255,7 @@ export function GoogleMap({
       (position) => {
         const currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
         map.setCenter(currentPosition);
-        map.setZoom(15);
+        map.setZoom(WALKING_ZOOM);
         setLocating(false);
       },
       (error) => {

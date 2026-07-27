@@ -1,7 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { LocateFixed, Snowflake } from "lucide-react";
+import { GoogleMap } from "./GoogleMap";
 import type { GoogleBounds } from "@/lib/googleMaps";
 import type { MapCamera, Place } from "@/lib/types";
 
@@ -17,11 +17,6 @@ type MapViewProps = {
   onInitialGeolocationAttempt?: () => void;
   onPoiPlacesChange?: (places: Place[]) => void;
 };
-
-const GoogleMap = dynamic(() => import("./GoogleMap").then((module) => module.GoogleMap), {
-  ssr: false,
-  loading: () => <FallbackMap registeredPlaces={[]} poiPlaces={[]} selectedPlace={null} onSelect={() => undefined} />
-});
 
 export function MapView({
   registeredPlaces,

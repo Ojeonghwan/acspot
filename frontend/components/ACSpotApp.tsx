@@ -8,7 +8,7 @@ import { PlaceBottomSheet } from "./PlaceBottomSheet";
 import { PlaceList } from "./PlaceList";
 import { SearchBar } from "./SearchBar";
 import { ViewToggle } from "./ViewToggle";
-import { fetchNearbyPlaces, fetchPlaceDetail, registerExternalPlace, saveAcReport, searchPlaces } from "@/lib/api";
+import { fetchNearbyPlaces, fetchPlaceDetail, recordAnalyticsEvent, recordVisit, registerExternalPlace, saveAcReport, searchPlaces } from "@/lib/api";
 import { getAnonymousId } from "@/lib/anonymousId";
 import { fetchGooglePlaceDetailsById, GOOGLE_PLACES_BOUNDS, searchGooglePlacesByText, type GoogleBounds } from "@/lib/googleMaps";
 import type { CategoryFilter, MapCamera, Place, ReportChoice, ViewMode } from "@/lib/types";
@@ -33,6 +33,20 @@ export function ACSpotApp() {
   useEffect(() => {
     setAnonymousId(getAnonymousId());
   }, []);
+
+  useEffect(() => {
+    if (!anonymousId || typeof window === "undefined") {
+      return;
+    }
+
+    const analyticsWindow = window as Window & { __acspotVisitLogged?: boolean };
+    if (analyticsWindow.__acspotVisitLogged) {
+      return;
+    }
+
+    analyticsWindow.__acspotVisitLogged = true;
+    void recordVisit(anonymousId);
+  }, [anonymousId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,7 +83,9 @@ export function ACSpotApp() {
         if (!controller.signal.aborted) {
           setError(apiError instanceof Error ? apiError.message : "Could not load places");
           setRegisteredPlaces([]);
-          setPoiPlaces([]);
+          if (normalized) {
+            setPoiPlaces([]);
+          }
           setLoading(false);
         }
       }
@@ -144,6 +160,17 @@ export function ACSpotApp() {
     try {
       const place = selectedPlace.isRegistered ? selectedPlace : await registerCandidatePlace(selectedPlace);
       await saveAcReport(place.placeId, anonymousId, reportChoice);
+      void recordAnalyticsEvent(anonymousId, {
+        eventName: "report_save",
+        placeId: place.placeId,
+        googlePlaceId: place.googlePlaceId,
+        category: place.category,
+        acStatus: reportChoice,
+        metadata: {
+          isRegistered: place.isRegistered,
+          source: place.googlePlaceId ? "GOOGLE" : place.osmId ? "OSM" : "MANUAL"
+        }
+      });
       const updatedPlace: Place = {
         ...place,
         isRegistered: true,
@@ -221,17 +248,7 @@ export function ACSpotApp() {
 
         {!showingSearch ? <CategoryFilters value={category} onChange={setCategory} /> : null}
 
-        {loading ? (
-          <StatusPanel message="Loading cool spots..." />
-        ) : error ? (
-          <StatusPanel message={error} />
-        ) : showingSearch || viewMode === "list" ? (
-          listPlaces.length ? (
-            <PlaceList places={listPlaces} title={listTitle} onSelect={selectPlace} />
-          ) : (
-            <StatusPanel message="No results found" />
-          )
-        ) : (
+        {!showingSearch && viewMode === "map" ? (
           <MapView
             registeredPlaces={filteredRegisteredPlaces}
             poiPlaces={filteredPoiPlaces}
@@ -244,6 +261,16 @@ export function ACSpotApp() {
             onInitialGeolocationAttempt={() => setInitialLocationAttempted(true)}
             onPoiPlacesChange={handlePoiPlacesChange}
           />
+        ) : loading ? (
+          <StatusPanel message="Loading cool spots..." />
+        ) : error ? (
+          <StatusPanel message={error} />
+        ) : (
+          listPlaces.length ? (
+            <PlaceList places={listPlaces} title={listTitle} onSelect={selectPlace} />
+          ) : (
+            <StatusPanel message="No results found" />
+          )
         )}
 
         <PlaceBottomSheet
