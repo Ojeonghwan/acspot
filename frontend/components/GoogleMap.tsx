@@ -26,7 +26,7 @@ type MarkerRecord = {
   place: Place;
 };
 
-const WALKING_ZOOM = 18;
+const WALKING_ZOOM = 16;
 
 export function GoogleMap({
   registeredPlaces,
