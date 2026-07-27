@@ -313,41 +313,62 @@ export function GoogleMap({
 
 function createPlaceMarker(google: any, map: any, place: Place, selected: boolean) {
   const position = { lat: place.latitude, lng: place.longitude };
-  const hasAc = place.acStatus === "AVAILABLE";
 
   return new google.maps.Marker({
     map,
     position,
     title: place.name,
     zIndex: place.isRegistered ? 20 : 10,
-    icon: createMarkerIcon(google, place, selected),
-    label: hasAc
-      ? {
-          text: "\u2733",
-          color: "#ffffff",
-          fontSize: selected ? "30px" : "26px",
-          fontWeight: "900"
-        }
-      : undefined
+    icon: createMarkerIcon(google, place, selected)
   });
 }
 
 function createMarkerIcon(google: any, place: Place, selected: boolean) {
   const hasAc = place.acStatus === "AVAILABLE";
+  if (hasAc) {
+    return createAcMarkerIcon(google, selected);
+  }
+
   const unavailable = place.acStatus === "UNAVAILABLE";
-  const fillColor = hasAc ? "#0797c9" : unavailable ? "#ff405a" : "#dff5ff";
-  const strokeColor = hasAc || unavailable ? "#ffffff" : "#0797c9";
-  const scale = selected ? 1.28 : hasAc || place.isRegistered ? 1.08 : 0.84;
+  const fillColor = unavailable ? "#ff405a" : "#dff5ff";
+  const strokeColor = unavailable ? "#ffffff" : "#0797c9";
+  const scale = selected ? 1.28 : place.isRegistered ? 1.08 : 0.84;
 
   return {
     path: "M 0 -24 C 12 -24 22 -14 22 -2 C 22 14 0 28 0 28 C 0 28 -22 14 -22 -2 C -22 -14 -12 -24 0 -24 Z",
     fillColor,
     fillOpacity: 1,
     strokeColor,
-    strokeWeight: hasAc || unavailable ? 3 : 4,
+    strokeWeight: unavailable ? 3 : 4,
     scale,
-    labelOrigin: new google.maps.Point(0, -3),
     anchor: new google.maps.Point(0, 28)
+  };
+}
+
+function createAcMarkerIcon(google: any, selected: boolean) {
+  const width = selected ? 58 : 48;
+  const height = selected ? 68 : 56;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56">
+      <path d="M24 55C19.3 48.8 7 39.7 7 24C7 14.6 14.6 7 24 7s17 7.6 17 17c0 15.7-12.3 24.8-17 31Z" fill="#0797c9" stroke="#ffffff" stroke-width="3"/>
+      <g fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M24 15v20"/>
+        <path d="M15.3 20l17.4 10"/>
+        <path d="M32.7 20l-17.4 10"/>
+        <path d="m20 17 4 4 4-4"/>
+        <path d="m20 33 4-4 4 4"/>
+        <path d="m15.8 24.3 5.4-1.5-1.5-5.4"/>
+        <path d="m32.2 25.7-5.4 1.5 1.5 5.4"/>
+        <path d="m32.2 24.3-5.4-1.5 1.5-5.4"/>
+        <path d="m15.8 25.7 5.4 1.5-1.5 5.4"/>
+      </g>
+    </svg>
+  `;
+
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new google.maps.Size(width, height),
+    anchor: new google.maps.Point(width / 2, height)
   };
 }
 
