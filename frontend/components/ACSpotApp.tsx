@@ -49,6 +49,11 @@ export function ACSpotApp() {
     void recordVisit(anonymousId);
   }, [anonymousId]);
 
+  const lookupCenter = useMemo(
+    () => userLocation ?? (mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined),
+    [mapCamera, userLocation]
+  );
+
   useEffect(() => {
     const controller = new AbortController();
     const normalized = query.trim();
@@ -61,10 +66,9 @@ export function ACSpotApp() {
       setError("");
       try {
         if (normalized) {
-          const searchCenter = userLocation ?? (mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined);
           const [registeredResults, googleResults] = await Promise.all([
-            searchPlaces(normalized, searchCenter),
-            searchGooglePlacesByText(normalized, searchCenter)
+            searchPlaces(normalized, lookupCenter),
+            searchGooglePlacesByText(normalized, lookupCenter)
           ]);
           if (!controller.signal.aborted) {
             setRegisteredPlaces(registeredResults);
@@ -74,7 +78,7 @@ export function ACSpotApp() {
           return;
         }
 
-        const nextRegisteredPlaces = await fetchNearbyPlaces(mapCamera?.latitude, mapCamera?.longitude);
+        const nextRegisteredPlaces = await fetchNearbyPlaces(lookupCenter?.latitude, lookupCenter?.longitude);
         if (!controller.signal.aborted) {
           setRegisteredPlaces(nextRegisteredPlaces);
           setPoiPlaces((current) => removeRegisteredPoiDuplicates(nextRegisteredPlaces, current));
@@ -97,7 +101,7 @@ export function ACSpotApp() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [query, mapCamera, userLocation]);
+  }, [query, lookupCenter]);
 
   const handlePoiPlacesChange = useCallback(
     (places: Place[]) => {
@@ -113,7 +117,6 @@ export function ACSpotApp() {
   const visibleMapPlaces = useMemo(() => filteredRegisteredPlaces.filter((place) => place.acStatus === "AVAILABLE"), [filteredRegisteredPlaces]);
   const searchPlacesToShow = useMemo(() => [...registeredPlaces, ...poiPlaces], [registeredPlaces, poiPlaces]);
   const listPlaces = query.trim() ? searchPlacesToShow : filteredRegisteredPlaces;
-  const distanceCenter = userLocation ?? (mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : null);
 
   async function selectPlace(place: Place) {
     setSelectedPlace(place);
@@ -122,7 +125,7 @@ export function ACSpotApp() {
     if (!place.isRegistered) {
       if (place.googlePlaceId) {
         try {
-          const detail = await fetchGooglePlaceDetailsById(place, distanceCenter ?? undefined);
+          const detail = await fetchGooglePlaceDetailsById(place, lookupCenter);
           setSelectedPlace(detail);
         } catch {
           // Keep the initial Google result if details are unavailable.
@@ -136,7 +139,7 @@ export function ACSpotApp() {
         return;
       }
 
-      const detail = await fetchPlaceDetail(place.placeId, anonymousId, distanceCenter ?? undefined);
+      const detail = await fetchPlaceDetail(place.placeId, anonymousId, lookupCenter);
       setSelectedPlace(detail);
       setReportChoice(detail.acStatus === "UNAVAILABLE" ? "UNAVAILABLE" : detail.acStatus === "AVAILABLE" ? "AVAILABLE" : null);
     } catch (apiError) {
@@ -207,17 +210,16 @@ export function ACSpotApp() {
     try {
       const normalized = query.trim();
       if (normalized) {
-        const searchCenter = userLocation ?? (mapCamera ? { latitude: mapCamera.latitude, longitude: mapCamera.longitude } : undefined);
         const [registeredResults, googleResults] = await Promise.all([
-          searchPlaces(normalized, searchCenter),
-          searchGooglePlacesByText(normalized, searchCenter)
+          searchPlaces(normalized, lookupCenter),
+          searchGooglePlacesByText(normalized, lookupCenter)
         ]);
         setRegisteredPlaces(registeredResults);
         setPoiPlaces(removeRegisteredPoiDuplicates(registeredResults, googleResults));
         return;
       }
 
-      const nextRegisteredPlaces = await fetchNearbyPlaces(mapCamera?.latitude, mapCamera?.longitude);
+      const nextRegisteredPlaces = await fetchNearbyPlaces(lookupCenter?.latitude, lookupCenter?.longitude);
       setRegisteredPlaces(nextRegisteredPlaces);
       setPoiPlaces((current) => removeRegisteredPoiDuplicates(nextRegisteredPlaces, current));
     } catch {
@@ -236,7 +238,7 @@ export function ACSpotApp() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#dbeaf2] text-acspot-text">
       <div className="relative flex h-screen w-full max-w-[390px] flex-col overflow-hidden bg-acspot-sky shadow-[0_0_30px_rgba(36,65,88,0.16)]">
-        <HeatAlertBar />
+        <HeatAlertBar location={userLocation} />
 
         <div className="z-10 bg-white px-4 py-3">
           <div className="flex items-center gap-2">
@@ -255,7 +257,7 @@ export function ACSpotApp() {
             poiPlaces={[]}
             selectedPlace={selectedPlace}
             initialCamera={mapCamera}
-            distanceCenter={distanceCenter}
+            distanceCenter={lookupCenter ?? null}
             shouldUseInitialGeolocation={!mapCamera && !initialLocationAttempted}
             onSelect={selectPlace}
             onBoundsChange={setMapBounds}
