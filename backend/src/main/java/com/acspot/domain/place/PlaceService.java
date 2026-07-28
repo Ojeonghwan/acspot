@@ -11,12 +11,14 @@ import com.acspot.domain.place.dto.PlaceDetailResponse;
 import com.acspot.domain.place.dto.PlaceSearchItem;
 import com.acspot.domain.place.dto.PlaceSearchResponse;
 import com.acspot.domain.report.AcReportRepository;
+import com.acspot.domain.report.AcStatus;
 import com.acspot.domain.summary.PlaceAcSummary;
 import com.acspot.domain.summary.PlaceAcSummaryRepository;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class PlaceService {
 
     private static final int DEFAULT_RADIUS_METERS = 1_000;
     private static final int MAX_RADIUS_METERS = 10_000;
+    private static final int MAX_MAP_MARKER_LIMIT = 150;
     private static final double EARTH_RADIUS_METERS = 6_371_000;
 
     private final PlaceRepository placeRepository;
@@ -45,8 +48,51 @@ public class PlaceService {
         return new NearbyPlacesResponse(places);
     }
 
+    public NearbyPlacesResponse findMapMarkers(
+            BigDecimal south,
+            BigDecimal west,
+            BigDecimal north,
+            BigDecimal east,
+            BigDecimal centerLat,
+            BigDecimal centerLng,
+            Integer zoom,
+            Integer limit
+    ) {
+        validateBounds(south, west, north, east);
+        int markerLimit = normalizeMarkerLimit(zoom, limit);
+        List<NearbyPlaceItem> places = placeRepository
+                .findMapMarkers(
+                        PlaceStatus.ACTIVE,
+                        AcStatus.AVAILABLE,
+                        south,
+                        west,
+                        north,
+                        east,
+                        PageRequest.of(0, markerLimit)
+                )
+                .stream()
+                .map(place -> toNearbyItem(place, centerLat, centerLng))
+                .toList();
+        return new NearbyPlacesResponse(places);
+    }
+
     public PlaceDetailResponse findDetail(Long placeId, String anonymousId) {
         Place place = findActivePlace(placeId);
+        return toDetailResponse(place, anonymousId);
+    }
+
+    public PlaceDetailResponse findDetailByGooglePlaceId(String googlePlaceId, String anonymousId) {
+        if (!StringUtils.hasText(googlePlaceId)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "googlePlaceId is required");
+        }
+        Place place = placeRepository.findBySourceTypeAndGooglePlaceId(SourceType.GOOGLE, googlePlaceId)
+                .filter(foundPlace -> foundPlace.getStatus() == PlaceStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Place not found"));
+        return toDetailResponse(place, anonymousId);
+    }
+
+    private PlaceDetailResponse toDetailResponse(Place place, String anonymousId) {
+        Long placeId = place.getId();
         PlaceAcSummary summary = summaryRepository.findById(placeId).orElse(null);
         MyReportResponse myReport = null;
         if (StringUtils.hasText(anonymousId)) {
@@ -130,6 +176,39 @@ public class PlaceService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "radius must be greater than 0");
         }
         return Math.min(radius, MAX_RADIUS_METERS);
+    }
+
+    private void validateBounds(BigDecimal south, BigDecimal west, BigDecimal north, BigDecimal east) {
+        if (south.compareTo(north) > 0) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "south must be less than or equal to north");
+        }
+        if (west.compareTo(east) > 0) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "west must be less than or equal to east");
+        }
+    }
+
+    private int normalizeMarkerLimit(Integer zoom, Integer limit) {
+        int zoomLimit = markerLimitForZoom(zoom);
+        if (limit == null) {
+            return zoomLimit;
+        }
+        if (limit <= 0) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "limit must be greater than 0");
+        }
+        return Math.min(Math.min(limit, zoomLimit), MAX_MAP_MARKER_LIMIT);
+    }
+
+    private int markerLimitForZoom(Integer zoom) {
+        if (zoom == null || zoom <= 12) {
+            return 10;
+        }
+        if (zoom <= 14) {
+            return 30;
+        }
+        if (zoom <= 16) {
+            return 80;
+        }
+        return MAX_MAP_MARKER_LIMIT;
     }
 
     private int calculateDistanceMeters(double lat1, double lng1, double lat2, double lng2) {

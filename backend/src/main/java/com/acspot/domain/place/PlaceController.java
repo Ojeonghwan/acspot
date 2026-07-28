@@ -43,6 +43,21 @@ public class PlaceController {
         return placeService.findNearby(lat, lng, radius);
     }
 
+    @Operation(summary = "Find map markers in current bounds")
+    @GetMapping("/map-markers")
+    public NearbyPlacesResponse mapMarkers(
+            @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal south,
+            @RequestParam @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal west,
+            @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal north,
+            @RequestParam @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal east,
+            @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal centerLat,
+            @RequestParam @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal centerLng,
+            @RequestParam(required = false) Integer zoom,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return placeService.findMapMarkers(south, west, north, east, centerLat, centerLng, zoom, limit);
+    }
+
     @Operation(summary = "Get place detail")
     @GetMapping("/{placeId}")
     public PlaceDetailResponse detail(
@@ -56,6 +71,15 @@ public class PlaceController {
     @GetMapping("/search")
     public PlaceSearchResponse search(@RequestParam String keyword) {
         return placeService.search(keyword);
+    }
+
+    @Operation(summary = "Get registered Google place detail")
+    @GetMapping("/by-google-place-id")
+    public PlaceDetailResponse detailByGooglePlaceId(
+            @RequestParam String googlePlaceId,
+            @RequestParam(required = false) String anonymousId
+    ) {
+        return placeService.findDetailByGooglePlaceId(googlePlaceId, anonymousId);
     }
 
     @Operation(summary = "Register a place")

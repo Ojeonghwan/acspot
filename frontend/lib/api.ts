@@ -1,4 +1,5 @@
 import { calculateDistanceMeters, DEFAULT_CENTER, formatDistance, formatRelativeTime, latitudeToY, longitudeToX } from "./geo";
+import type { GoogleBounds } from "./googleMaps";
 import type { AcStatus, CoolingLevel, Place, PlaceCategory, ReportChoice } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -98,6 +99,24 @@ export async function fetchNearbyPlaces(latitude = DEFAULT_CENTER.latitude, long
   return data.places.map((place) => toPlace(place, place.googlePlaceId));
 }
 
+export async function fetchMapMarkers(
+  bounds: GoogleBounds,
+  zoom: number,
+  distanceCenter: DistanceCenter = DEFAULT_CENTER
+): Promise<Place[]> {
+  const params = new URLSearchParams({
+    south: String(bounds.south),
+    west: String(bounds.west),
+    north: String(bounds.north),
+    east: String(bounds.east),
+    centerLat: String(distanceCenter.latitude),
+    centerLng: String(distanceCenter.longitude),
+    zoom: String(Math.round(zoom))
+  });
+  const data = await request<NearbyPlacesResponse>(`/api/places/map-markers?${params.toString()}`);
+  return data.places.map((place) => toPlace(place, place.googlePlaceId));
+}
+
 export async function searchPlaces(keyword: string, distanceCenter: DistanceCenter = DEFAULT_CENTER): Promise<Place[]> {
   const params = new URLSearchParams({ keyword });
   const data = await request<PlaceSearchResponse>(`/api/places/search?${params.toString()}`);
@@ -121,6 +140,38 @@ export async function searchPlaces(keyword: string, distanceCenter: DistanceCent
 export async function fetchPlaceDetail(placeId: number, anonymousId: string, distanceCenter: DistanceCenter = DEFAULT_CENTER): Promise<Place> {
   const params = anonymousId ? `?${new URLSearchParams({ anonymousId }).toString()}` : "";
   const detail = await request<PlaceDetailResponse>(`/api/places/${placeId}${params}`);
+  return toPlace(
+    {
+      placeId: detail.placeId,
+      name: detail.name,
+      category: detail.category,
+      address: detail.address,
+      latitude: detail.latitude,
+      longitude: detail.longitude,
+      googlePlaceId: detail.googlePlaceId,
+      osmId: detail.osmId,
+      distanceMeters: calculateDistanceMeters(distanceCenter.latitude, distanceCenter.longitude, detail.latitude, detail.longitude),
+      acStatus: detail.acSummary.currentAcStatus,
+      trustScore: detail.acSummary.trustScore,
+      totalReportCount: detail.acSummary.totalReportCount,
+      lastReportedAt: detail.acSummary.lastReportedAt
+    },
+    detail.googlePlaceId,
+    detail.googleMapsUrl,
+    detail.osmId
+  );
+}
+
+export async function fetchPlaceDetailByGooglePlaceId(
+  googlePlaceId: string,
+  anonymousId: string,
+  distanceCenter: DistanceCenter = DEFAULT_CENTER
+): Promise<Place> {
+  const params = new URLSearchParams({ googlePlaceId });
+  if (anonymousId) {
+    params.set("anonymousId", anonymousId);
+  }
+  const detail = await request<PlaceDetailResponse>(`/api/places/by-google-place-id?${params.toString()}`);
   return toPlace(
     {
       placeId: detail.placeId,

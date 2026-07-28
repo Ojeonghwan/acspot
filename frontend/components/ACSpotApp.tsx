@@ -8,9 +8,9 @@ import { PlaceBottomSheet } from "./PlaceBottomSheet";
 import { PlaceList } from "./PlaceList";
 import { SearchBar } from "./SearchBar";
 import { ViewToggle } from "./ViewToggle";
-import { fetchNearbyPlaces, fetchPlaceDetail, recordAnalyticsEvent, recordVisit, registerExternalPlace, saveAcReport, searchPlaces } from "@/lib/api";
+import { fetchMapMarkers, fetchNearbyPlaces, fetchPlaceDetail, fetchPlaceDetailByGooglePlaceId, recordAnalyticsEvent, recordVisit, registerExternalPlace, saveAcReport, searchPlaces } from "@/lib/api";
 import { getAnonymousId } from "@/lib/anonymousId";
-import { fetchGooglePlaceDetailsById, GOOGLE_PLACES_BOUNDS, searchGooglePlacesByText, type GoogleBounds } from "@/lib/googleMaps";
+import { fetchGooglePlaceDetailsById, searchGooglePlacesByText, type GoogleBounds } from "@/lib/googleMaps";
 import type { CategoryFilter, MapCamera, Place, ReportChoice, ViewMode } from "@/lib/types";
 
 export function ACSpotApp() {
@@ -18,8 +18,9 @@ export function ACSpotApp() {
   const [category, setCategory] = useState<CategoryFilter>("ALL");
   const [query, setQuery] = useState("");
   const [registeredPlaces, setRegisteredPlaces] = useState<Place[]>([]);
+  const [mapMarkerPlaces, setMapMarkerPlaces] = useState<Place[]>([]);
   const [poiPlaces, setPoiPlaces] = useState<Place[]>([]);
-  const [, setMapBounds] = useState<GoogleBounds>(GOOGLE_PLACES_BOUNDS);
+  const [mapBounds, setMapBounds] = useState<GoogleBounds | null>(null);
   const [mapCamera, setMapCamera] = useState<MapCamera | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [initialLocationAttempted, setInitialLocationAttempted] = useState(false);
@@ -78,6 +79,13 @@ export function ACSpotApp() {
           return;
         }
 
+        if (viewMode === "map") {
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
+          return;
+        }
+
         const nextRegisteredPlaces = await fetchNearbyPlaces(lookupCenter?.latitude, lookupCenter?.longitude);
         if (!controller.signal.aborted) {
           setRegisteredPlaces(nextRegisteredPlaces);
@@ -101,20 +109,51 @@ export function ACSpotApp() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [query, lookupCenter]);
+  }, [query, lookupCenter, viewMode]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadMapMarkerPlaces() {
+      if (query.trim() || viewMode !== "map" || !mapBounds || !mapCamera) {
+        return;
+      }
+
+      const distanceCenter = lookupCenter ?? { latitude: mapCamera.latitude, longitude: mapCamera.longitude };
+      try {
+        const nextMapMarkers = await fetchMapMarkers(mapBounds, mapCamera.zoom, distanceCenter);
+        if (!controller.signal.aborted) {
+          setMapMarkerPlaces(nextMapMarkers);
+          setPoiPlaces((current) => removeRegisteredPoiDuplicates(nextMapMarkers, current));
+        }
+      } catch (apiError) {
+        if (!controller.signal.aborted) {
+          setError(apiError instanceof Error ? apiError.message : "Could not load map markers");
+          setMapMarkerPlaces([]);
+        }
+      }
+    }
+
+    const timeoutId = window.setTimeout(loadMapMarkerPlaces, 250);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [mapBounds, mapCamera, lookupCenter, query, viewMode]);
 
   const handlePoiPlacesChange = useCallback(
     (places: Place[]) => {
       if (query.trim()) {
         return;
       }
-      setPoiPlaces(removeRegisteredPoiDuplicates(registeredPlaces, places));
+      setPoiPlaces(removeRegisteredPoiDuplicates([...registeredPlaces, ...mapMarkerPlaces], places));
     },
-    [query, registeredPlaces]
+    [mapMarkerPlaces, query, registeredPlaces]
   );
 
   const filteredRegisteredPlaces = useMemo(() => filterByCategory(registeredPlaces, category), [category, registeredPlaces]);
-  const visibleMapPlaces = useMemo(() => filteredRegisteredPlaces.filter((place) => place.acStatus === "AVAILABLE"), [filteredRegisteredPlaces]);
+  const visibleMapPlaces = useMemo(() => filterByCategory(mapMarkerPlaces, category), [category, mapMarkerPlaces]);
+  const knownRegisteredPlaces = useMemo(() => mergePlaces(registeredPlaces, mapMarkerPlaces), [mapMarkerPlaces, registeredPlaces]);
   const searchPlacesToShow = useMemo(() => [...registeredPlaces, ...poiPlaces], [registeredPlaces, poiPlaces]);
   const listPlaces = query.trim() ? searchPlacesToShow : filteredRegisteredPlaces;
 
@@ -124,6 +163,16 @@ export function ACSpotApp() {
 
     if (!place.isRegistered) {
       if (place.googlePlaceId) {
+        if (anonymousId) {
+          try {
+            const registeredDetail = await fetchPlaceDetailByGooglePlaceId(place.googlePlaceId, anonymousId, lookupCenter);
+            setSelectedPlace(registeredDetail);
+            setReportChoice(toReportChoice(registeredDetail.acStatus));
+            return;
+          } catch {
+            // Continue with Google details when the place is not registered yet.
+          }
+        }
         try {
           const detail = await fetchGooglePlaceDetailsById(place, lookupCenter);
           setSelectedPlace(detail);
@@ -186,6 +235,10 @@ export function ACSpotApp() {
       showToast("Report saved");
       setSelectedPlace(null);
       setRegisteredPlaces((current) => [...current.filter((item) => !matchesPlace(item, updatedPlace)), updatedPlace]);
+      setMapMarkerPlaces((current) => {
+        const withoutPlace = current.filter((item) => !matchesPlace(item, updatedPlace));
+        return updatedPlace.acStatus === "AVAILABLE" ? [...withoutPlace, updatedPlace] : withoutPlace;
+      });
       setPoiPlaces((current) => current.filter((item) => !matchesPlace(item, updatedPlace)));
       refreshCurrentList();
     } catch (apiError) {
@@ -216,6 +269,14 @@ export function ACSpotApp() {
         ]);
         setRegisteredPlaces(registeredResults);
         setPoiPlaces(removeRegisteredPoiDuplicates(registeredResults, googleResults));
+        return;
+      }
+
+      if (viewMode === "map" && mapBounds && mapCamera) {
+        const distanceCenter = lookupCenter ?? { latitude: mapCamera.latitude, longitude: mapCamera.longitude };
+        const nextMapMarkers = await fetchMapMarkers(mapBounds, mapCamera.zoom, distanceCenter);
+        setMapMarkerPlaces(nextMapMarkers);
+        setPoiPlaces((current) => removeRegisteredPoiDuplicates(nextMapMarkers, current));
         return;
       }
 
@@ -254,7 +315,7 @@ export function ACSpotApp() {
         {!showingSearch && viewMode === "map" ? (
           <MapView
             registeredPlaces={visibleMapPlaces}
-            knownRegisteredPlaces={registeredPlaces}
+            knownRegisteredPlaces={knownRegisteredPlaces}
             poiPlaces={[]}
             selectedPlace={selectedPlace}
             initialCamera={mapCamera}
@@ -307,6 +368,15 @@ function toReportChoice(status: Place["acStatus"]): ReportChoice | null {
     return status;
   }
   return null;
+}
+
+function mergePlaces(...placeGroups: Place[][]): Place[] {
+  return placeGroups.flat().reduce<Place[]>((places, place) => {
+    if (places.some((item) => matchesPlace(item, place))) {
+      return places;
+    }
+    return [...places, place];
+  }, []);
 }
 
 function removeRegisteredPoiDuplicates(registeredPlaces: Place[], poiPlaces: Place[]): Place[] {
