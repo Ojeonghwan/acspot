@@ -117,6 +117,22 @@ export async function fetchMapMarkers(
   return data.places.map((place) => toPlace(place, place.googlePlaceId));
 }
 
+export async function fetchPlacesInBounds(
+  bounds: GoogleBounds,
+  distanceCenter: DistanceCenter = DEFAULT_CENTER
+): Promise<Place[]> {
+  const params = new URLSearchParams({
+    south: String(bounds.south),
+    west: String(bounds.west),
+    north: String(bounds.north),
+    east: String(bounds.east),
+    centerLat: String(distanceCenter.latitude),
+    centerLng: String(distanceCenter.longitude)
+  });
+  const data = await request<NearbyPlacesResponse>(`/api/places/bounds?${params.toString()}`);
+  return data.places.map((place) => toPlace(place, place.googlePlaceId));
+}
+
 export async function searchPlaces(keyword: string, distanceCenter: DistanceCenter = DEFAULT_CENTER): Promise<Place[]> {
   const params = new URLSearchParams({ keyword });
   const data = await request<PlaceSearchResponse>(`/api/places/search?${params.toString()}`);

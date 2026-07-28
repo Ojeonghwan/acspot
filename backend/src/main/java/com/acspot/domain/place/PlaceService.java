@@ -76,6 +76,31 @@ public class PlaceService {
         return new NearbyPlacesResponse(places);
     }
 
+    public NearbyPlacesResponse findPlacesInBounds(
+            BigDecimal south,
+            BigDecimal west,
+            BigDecimal north,
+            BigDecimal east,
+            BigDecimal centerLat,
+            BigDecimal centerLng
+    ) {
+        validateBounds(south, west, north, east);
+        List<NearbyPlaceItem> places = placeRepository
+                .findPlacesInBounds(
+                        PlaceStatus.ACTIVE,
+                        AcStatus.AVAILABLE,
+                        south,
+                        west,
+                        north,
+                        east
+                )
+                .stream()
+                .map(place -> toNearbyItem(place, centerLat, centerLng))
+                .sorted(Comparator.comparing(NearbyPlaceItem::distanceMeters))
+                .toList();
+        return new NearbyPlacesResponse(places);
+    }
+
     public PlaceDetailResponse findDetail(Long placeId, String anonymousId) {
         Place place = findActivePlace(placeId);
         return toDetailResponse(place, anonymousId);

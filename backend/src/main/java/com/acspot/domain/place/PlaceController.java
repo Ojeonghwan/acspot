@@ -58,6 +58,19 @@ public class PlaceController {
         return placeService.findMapMarkers(south, west, north, east, centerLat, centerLng, zoom, limit);
     }
 
+    @Operation(summary = "Find list places in current bounds")
+    @GetMapping("/bounds")
+    public NearbyPlacesResponse bounds(
+            @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal south,
+            @RequestParam @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal west,
+            @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal north,
+            @RequestParam @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal east,
+            @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal centerLat,
+            @RequestParam @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal centerLng
+    ) {
+        return placeService.findPlacesInBounds(south, west, north, east, centerLat, centerLng);
+    }
+
     @Operation(summary = "Get place detail")
     @GetMapping("/{placeId}")
     public PlaceDetailResponse detail(
