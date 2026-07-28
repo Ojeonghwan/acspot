@@ -8,6 +8,7 @@ import type { MapCamera, Place } from "@/lib/types";
 
 type GoogleMapProps = {
   registeredPlaces: Place[];
+  knownRegisteredPlaces?: Place[];
   poiPlaces: Place[];
   selectedPlace: Place | null;
   initialCamera?: MapCamera | null;
@@ -30,6 +31,7 @@ const WALKING_ZOOM = 16;
 
 export function GoogleMap({
   registeredPlaces,
+  knownRegisteredPlaces = registeredPlaces,
   poiPlaces,
   selectedPlace,
   initialCamera,
@@ -46,9 +48,14 @@ export function GoogleMap({
   const mapRef = useRef<any>(null);
   const markersRef = useRef<MarkerRecord[]>([]);
   const idleTimeoutRef = useRef<number | null>(null);
+  const knownRegisteredPlacesRef = useRef<Place[]>(knownRegisteredPlaces);
   const [loadError, setLoadError] = useState("");
   const [locationError, setLocationError] = useState("");
   const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    knownRegisteredPlacesRef.current = knownRegisteredPlaces;
+  }, [knownRegisteredPlaces]);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,6 +162,12 @@ export function GoogleMap({
   async function openGoogleMapPoi(placeId: string) {
     const map = mapRef.current;
     if (!map) {
+      return;
+    }
+
+    const registeredPlace = knownRegisteredPlacesRef.current.find((place) => place.googlePlaceId === placeId);
+    if (registeredPlace) {
+      onSelect(registeredPlace);
       return;
     }
 

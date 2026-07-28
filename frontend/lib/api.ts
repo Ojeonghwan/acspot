@@ -15,6 +15,7 @@ type NearbyPlaceItem = {
   address: string;
   latitude: number;
   longitude: number;
+  googlePlaceId: string | null;
   osmId: string | null;
   distanceMeters: number;
   acStatus: Exclude<AcStatus, "UNVERIFIED">;
@@ -54,6 +55,7 @@ type PlaceDetailResponse = {
   address: string;
   latitude: number;
   longitude: number;
+  googlePlaceId: string | null;
   googleMapsUrl: string | null;
   osmId: string | null;
   acSummary: {
@@ -93,7 +95,7 @@ export async function fetchNearbyPlaces(latitude = DEFAULT_CENTER.latitude, long
     radius: String(radius)
   });
   const data = await request<NearbyPlacesResponse>(`/api/places/nearby?${params.toString()}`);
-  return data.places.map((place) => toPlace(place));
+  return data.places.map((place) => toPlace(place, place.googlePlaceId));
 }
 
 export async function searchPlaces(keyword: string, distanceCenter: DistanceCenter = DEFAULT_CENTER): Promise<Place[]> {
@@ -127,6 +129,7 @@ export async function fetchPlaceDetail(placeId: number, anonymousId: string, dis
       address: detail.address,
       latitude: detail.latitude,
       longitude: detail.longitude,
+      googlePlaceId: detail.googlePlaceId,
       osmId: detail.osmId,
       distanceMeters: calculateDistanceMeters(distanceCenter.latitude, distanceCenter.longitude, detail.latitude, detail.longitude),
       acStatus: detail.acSummary.currentAcStatus,
@@ -134,7 +137,7 @@ export async function fetchPlaceDetail(placeId: number, anonymousId: string, dis
       totalReportCount: detail.acSummary.totalReportCount,
       lastReportedAt: detail.acSummary.lastReportedAt
     },
-    null,
+    detail.googlePlaceId,
     detail.googleMapsUrl,
     detail.osmId
   );

@@ -120,7 +120,7 @@ export function ACSpotApp() {
 
   async function selectPlace(place: Place) {
     setSelectedPlace(place);
-    setReportChoice(place.acStatus === "UNAVAILABLE" ? "UNAVAILABLE" : place.acStatus === "AVAILABLE" ? "AVAILABLE" : null);
+    setReportChoice(toReportChoice(place.acStatus));
 
     if (!place.isRegistered) {
       if (place.googlePlaceId) {
@@ -141,7 +141,7 @@ export function ACSpotApp() {
 
       const detail = await fetchPlaceDetail(place.placeId, anonymousId, lookupCenter);
       setSelectedPlace(detail);
-      setReportChoice(detail.acStatus === "UNAVAILABLE" ? "UNAVAILABLE" : detail.acStatus === "AVAILABLE" ? "AVAILABLE" : null);
+      setReportChoice(toReportChoice(detail.acStatus));
     } catch (apiError) {
       showToast(apiError instanceof Error ? apiError.message : "Could not load place detail");
     }
@@ -254,6 +254,7 @@ export function ACSpotApp() {
         {!showingSearch && viewMode === "map" ? (
           <MapView
             registeredPlaces={visibleMapPlaces}
+            knownRegisteredPlaces={registeredPlaces}
             poiPlaces={[]}
             selectedPlace={selectedPlace}
             initialCamera={mapCamera}
@@ -299,6 +300,13 @@ export function ACSpotApp() {
 
 function filterByCategory(places: Place[], category: CategoryFilter): Place[] {
   return places.filter((place) => category === "ALL" || place.category === category);
+}
+
+function toReportChoice(status: Place["acStatus"]): ReportChoice | null {
+  if (status === "AVAILABLE" || status === "UNKNOWN" || status === "UNAVAILABLE") {
+    return status;
+  }
+  return null;
 }
 
 function removeRegisteredPoiDuplicates(registeredPlaces: Place[], poiPlaces: Place[]): Place[] {

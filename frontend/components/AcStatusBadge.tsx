@@ -24,6 +24,15 @@ export function AcStatusBadge({ status }: AcStatusBadgeProps) {
     );
   }
 
+  if (status === "UNKNOWN") {
+    return (
+      <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#ffd166] bg-[#fff8df] px-3 text-sm font-bold text-[#c97900]">
+        <CircleHelp aria-hidden="true" size={15} />
+        Not sure
+      </span>
+    );
+  }
+
   return (
     <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#d8dee7] bg-[#f1f4f8] px-3 text-sm font-bold text-[#6d7888]">
       <CircleHelp aria-hidden="true" size={15} />

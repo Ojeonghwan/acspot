@@ -7,6 +7,7 @@ import type { MapCamera, Place } from "@/lib/types";
 
 type MapViewProps = {
   registeredPlaces: Place[];
+  knownRegisteredPlaces?: Place[];
   poiPlaces: Place[];
   selectedPlace: Place | null;
   initialCamera?: MapCamera | null;
@@ -22,6 +23,7 @@ type MapViewProps = {
 
 export function MapView({
   registeredPlaces,
+  knownRegisteredPlaces,
   poiPlaces,
   selectedPlace,
   initialCamera,
@@ -37,6 +39,7 @@ export function MapView({
   return (
     <GoogleMap
       registeredPlaces={registeredPlaces}
+      knownRegisteredPlaces={knownRegisteredPlaces}
       poiPlaces={poiPlaces}
       selectedPlace={selectedPlace}
       initialCamera={initialCamera}
